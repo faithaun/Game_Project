@@ -19,12 +19,12 @@ Jungle Jumper is a game inspired by Doodle jump. Play as a monkey that continuou
 - Save/Load System - Score is save and update score
 
 ## Gameplay:
-1. The monkey starts on a branch 
-2. Players move left and right using the keyboard and land on branches since monkey jumps automatically
-3. Avoid obstacles while climbing
+1. The monkey starts on a branch.
+2. Player can move the monkey left and right, attack using the keyboard, and must land on branches.
+3. Avoid obstacles while climbing.
 	- different obstacles for each "stage"
-4. Collect power ups to increase survival
-5. Game ends if monkey fall or hits an obstacle
+4. Collect power ups to increase survival.
+5. Game ends if monkey fall or hits an obstacle.
 
 
 ## Project Structure (Tentative)
@@ -37,8 +37,8 @@ JungleJumper/
 |---platform   # normal, moving, breakable branches
 |---Obstacles
 |---Power Ups
-|---bullet
-|---Score manager  #keep track of the high score
+|---bullet  
+|---Score manager  #keep track of the high score, bananas collected 
 |---Resources  #images,fonts, and maybe sounds
 ``` 
 
