@@ -1,5 +1,6 @@
 #include "MainMenuState.hpp"
 #include "../Game.hpp"
+#include "PlayState.hpp"
 #include <iostream>
 
 MainMenuState::MainMenuState(Game& game) : game(game) {
@@ -31,8 +32,8 @@ void MainMenuState::setupTitle() {
 	titleLine1.setFont(font);
 	titleLine1.setString("Jungle");
 	titleLine1.setCharacterSize(90);
-	titleLine1.setFillColor(sf::Color::White);
-	titleLine1.setOutlineColor(sf::Color::Black);
+	titleLine1.setFillColor(sf::Color(101, 67, 33)); //brown
+	titleLine1.setOutlineColor(sf::Color(224, 250, 235));
 	titleLine1.setOutlineThickness(4.f);
 
 	sf::FloatRect bounds1 = titleLine1.getLocalBounds();
@@ -42,8 +43,8 @@ void MainMenuState::setupTitle() {
 	titleLine2.setFont(font);
 	titleLine2.setString("Jumper");
 	titleLine2.setCharacterSize(90);
-	titleLine2.setFillColor(sf::Color::White);
-	titleLine2.setOutlineColor(sf::Color::Black);
+	titleLine2.setFillColor(sf::Color(76, 145, 65)); //green
+	titleLine2.setOutlineColor(sf::Color(255, 250, 235));
 	titleLine2.setOutlineThickness(4.f);
 
 	sf::FloatRect bounds2 = titleLine2.getLocalBounds();
@@ -54,11 +55,27 @@ void MainMenuState::setupTitle() {
 
 void MainMenuState::setupButtons() {
 	//Play button for now
-	buttons.emplace_back(font, "Play", sf::Vector2f(190.f, 300.f), sf::Vector2f(160.f, 55.f));
+	buttons.emplace_back(font, "Play", sf::Vector2f(110.f, 280.f), sf::Vector2f(320.f, 80.f));
 	buttons.back().setOnClick([this]() {
-		std::cerr << "Play pressed -> TODO: switch to PlayState" << std::endl;
+		std::cerr << "Play pressed -> Switch to PlayState" << std::endl;
+		game.changeState(std::make_unique<PlayState>(game));
+	});
+
+
+//Setings button
+	buttons.emplace_back(font, "Settings", sf::Vector2f(140.f, 390.f), sf::Vector2f(260.f, 65.f));
+	buttons.back().setOnClick([this]() {
+		std::cerr << "Settings pressed - TODO" << std::endl;
+	});
+
+//Exit button 
+	buttons.emplace_back(font, "Exit", sf::Vector2f(165.f, 485.f), sf::Vector2f(210.f, 55.f));
+	buttons.back().setOnClick([this]() { 
+		game.requestQuit();
 	});
 }
+
+
 
 void MainMenuState::onEnter() {
 	std::cerr << "Entered Main Menu" << std::endl;

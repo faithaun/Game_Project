@@ -16,9 +16,15 @@ public:
 	void draw(sf::RenderWindow& window) const;
 
 private:
-	sf::RectangleShape shape;
+	sf::Vector2f position;
+	sf::Vector2f size;
+
+// rounded rectangle 
+	sf::RectangleShape body;
 	sf::Text text;
+
 	std::function<void()>onClick;
 	bool isHovered = false;
-
+	
+	void applyColor(sf::Color fill);
 };
