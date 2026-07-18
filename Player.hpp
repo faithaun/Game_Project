@@ -1,30 +1,38 @@
-#pragma once
+#ifndef PLAYER_HPP
+#define PLAYER_HPP
+
 #include <SFML/Graphics.hpp>
 
+
 class Player {
-public: 
-	static constexpr float WIDTH = 40.f;
-	static constexpr float HEIGHT = 40.f;
-
+public:
+	Player(float startX, float startY);
 	void handleInput();
-
-	void update(float deltaTime, float screenWidth);
-
+	void applyGravity(float deltaTime);
+	void jump();
+	void update(float deltaTime, float windowWidth);
 	void draw(sf::RenderWindow& window) const;
 
-	void jump();
-
+	//getter
 	sf::FloatRect getBounds() const;
 	sf::Vector2f getPosition() const;
-	float getVelocityY() const;
-	bool isFalling() const;
-	void reset(float startX, float startY);
+	float	getVelocityY() const;
+
+	//setters//mutators
+	void setPosition(float x, float y);
+	void setVelocityY(float vy);
+	void reset(float x, float y);
 
 private:
 	sf::RectangleShape shape;
-	sf::Vector2f	velocity;
+	sf::Vector2f velocity;
 	
-	static constexpr float MOVE_SPEED = 320.f;   //horizontal speed
-	static constexpr float GRAVITY = 1000.f;   //downward acceleration
-	static constexpr float JUMP_SPEED = -650.f;        //instantenous jump velocity
+	static const float WIDTH;
+	static const float HEIGHT;
+	static const float GRAVITY;
+	static const float JUMP_VELOCITY;
+	static const float MOVE_SPEED;
 };
+
+#endif 
+
