@@ -25,7 +25,7 @@ PlayState::PlayState(Game& game) : game(game),
 	
 	std::srand(static_cast<unsigned int>(std::time(nullptr)));
 	
-	fontLoaded = font.loadFromFile("resources/LuckiestGuy.tff");
+	fontLoaded = font.loadFromFile("resources/LuckiestGuy.ttf");
 	if (!fontLoaded) {	
 		std::cerr << "Warning: could not load font -- but gameplay continues normally." << std::endl;
 	}
