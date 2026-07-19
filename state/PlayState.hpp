@@ -28,11 +28,15 @@ private:
 	Player player;
 	std::vector<Platform> platforms;
 	
+	sf::Texture backgroundTexture;
+	sf::Sprite backgroundSprite;
 	sf::View gameView;  //scrolling camera
 	float cameraCenterY;  // current vertical center of camera
 	float bestHeightY;    //highest Y the player has ever reach for score
 	int score;
 	bool isGameOver;
+	bool cameraFollowingDown;
+	float fallStartBottomY;
 
 	sf::Font font;
 	bool fontLoaded;

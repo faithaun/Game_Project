@@ -1,6 +1,7 @@
 #include "PlayState.hpp"
 #include "../Game.hpp"
 #include <cstdlib>
+#include <cmath>
 #include <ctime>
 #include <iostream>
 #include <algorithm>
@@ -12,7 +13,7 @@ namespace {
 	constexpr float PLATFORM_HEIGHT = 15.f;
 	constexpr int PLATFORM_COUNT = 12;                // 12 min platforms, per spec
 	constexpr float PLATFORM_SPACING = 70.f;
-	constexpr float GAME_OVER_MARGIN = 60.f; //how far below the camera before game over
+	constexpr float GAME_OVER_MARGIN = 700.f;
 }
 
 PlayState::PlayState(Game& game) : game(game),
@@ -21,14 +22,25 @@ PlayState::PlayState(Game& game) : game(game),
 	bestHeightY(WINDOW_HEIGHT - 100.f), 
 	score(0), 
 	isGameOver(false), 
+	cameraFollowingDown(false),
+	fallStartBottomY(0.f),
 	fontLoaded(false) {
 	
 	std::srand(static_cast<unsigned int>(std::time(nullptr)));
 	
+ 	//font 	
 	fontLoaded = font.loadFromFile("resources/LuckiestGuy.ttf");
 	if (!fontLoaded) {	
 		std::cerr << "Warning: could not load font -- but gameplay continues normally." << std::endl;
 	}
+
+	
+	if (!backgroundTexture.loadFromFile("resources/playbackground.png")) {
+		std::cerr << "Warning: could not load resources/playbackground.png" << std::endl;
+	}
+	backgroundSprite.setTexture(backgroundTexture);
+	sf::Vector2u texSize = backgroundTexture.getSize();
+	backgroundSprite.setScale(WINDOW_WIDTH / texSize.x, WINDOW_HEIGHT / texSize.y); 
 
 	scoreText.setFont(font);
 	scoreText.setCharacterSize(24);
@@ -132,11 +144,25 @@ void PlayState::handleCollisions(float previousPlayerBottom) {
 
 
 void PlayState::updateCamera() {
-	//camera targets players Y directly, but moves up
-	float desiredCenterY = player.getPosition().y;
-	if (desiredCenterY < cameraCenterY) {
-		cameraCenterY = desiredCenterY;
+	float frozenBottom = cameraCenterY + WINDOW_HEIGHT / 2.f;
+	
+	//player falls past the bottom view, start smoothly following down
+	if (!cameraFollowingDown && player.getPosition().y > frozenBottom) {
+		cameraFollowingDown = true;
+		fallStartBottomY = frozenBottom;
 	}
+	if (cameraFollowingDown) {
+		//track the player while falling
+		cameraCenterY = player.getPosition().y - WINDOW_HEIGHT / 2.f + 100.f;
+	}
+	else { 
+		// climb, camera moves up
+		float desiredCenterY = player.getPosition().y;
+		if (desiredCenterY < cameraCenterY) {
+			cameraCenterY = desiredCenterY;
+		}
+	}
+
 	gameView.setCenter(WINDOW_WIDTH / 2.f, cameraCenterY);
 }
 
@@ -159,6 +185,8 @@ void PlayState::restartGame() {
 	bestHeightY = WINDOW_HEIGHT - 100.f;
 	score = 0;
 	isGameOver = false;
+	cameraFollowingDown = false;
+	fallStartBottomY = 0.f;
 }
 
 void PlayState::handleEvent(const sf::Event& event) {
@@ -168,7 +196,8 @@ void PlayState::handleEvent(const sf::Event& event) {
 }
 
 void PlayState::update(float deltaTime) {
-	if (isGameOver) {
+	if (isGameOver) {        //game over show -- freeze camera, let plater fall under gavity
+		player.update(deltaTime, WINDOW_WIDTH);
 		return;      // freeze gameplay until player restarts
 	}
 
@@ -184,14 +213,22 @@ void PlayState::update(float deltaTime) {
 	updateScore();
 
 	//game over: player fallen below what camera can see
-	if (player.getPosition().y > cameraCenterY + WINDOW_HEIGHT / 2.f + GAME_OVER_MARGIN) {
+	if (cameraFollowingDown && player.getPosition().y > fallStartBottomY + GAME_OVER_MARGIN) {
 		isGameOver = true;
 	}
 }
 
 void PlayState::render(sf::RenderWindow& window) {
 	window.setView(gameView);
-	window.clear(sf::Color(135, 206, 235));   //sky blue
+	window.clear(sf::Color());
+	float topOfView = cameraCenterY - WINDOW_HEIGHT / 2.f;
+	float tileIndex = std::floor(topOfView / WINDOW_HEIGHT);
+	float tileY = tileIndex * WINDOW_HEIGHT;
+	
+	backgroundSprite.setPosition(0.f, tileY);
+	window.draw(backgroundSprite);
+	backgroundSprite.setPosition(0.f, tileY + WINDOW_HEIGHT);
+	window.draw(backgroundSprite);
 
 	for (const auto& platform : platforms) {
 		window.draw(platform.shape);
