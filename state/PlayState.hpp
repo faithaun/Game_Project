@@ -5,13 +5,16 @@
 #pragma once
 #include "GameState.hpp"
 #include "../Player.hpp"
+#include "../powerups/PowerUp.hpp"
 #include <vector>
+#include <memory>
 
 class Game;
 
 //playform simple dont need own class or file
 struct Platform {
 	sf::RectangleShape shape;
+	std::unique_ptr<PowerUp>attachedPowerUp;	 //nullptr if this platform has none
 };
 
 class PlayState : public GameState {
@@ -35,6 +38,9 @@ private:
 	float bestHeightY;    //highest Y the player has ever reach for score
 	int score;
 	bool isGameOver;
+	int springUnlockScore;
+	int maxSpringThisGame;
+	int springSpawnedSoFar;
 	bool cameraFollowingDown;
 	float fallStartBottomY;
 
@@ -46,8 +52,9 @@ private:
 
 	void spawnPlatforms();
 	void recyclePlatforms();
-	void handleCollisions(float previousPlayerBottom);	
+	void handleCollisions(float previousPlayerBottom);
 	void updateCamera();
+	void checkPowerUps();
 	void updateScore();
 	void restartGame();
 };

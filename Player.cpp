@@ -5,6 +5,7 @@ const float Player::WIDTH = 40.f;
 const float Player::HEIGHT = 40.f;
 const float Player::GRAVITY = 900.f;         //pulls player down
 const float Player::JUMP_VELOCITY = -520.f;      // negative = upward
+const float Player::BIG_JUMP_VELOCITY = -780.f;
 const float Player::MOVE_SPEED = 300.f;       // horizontal speed
 
 
@@ -38,6 +39,9 @@ void Player::jump() {
 	velocity.y = JUMP_VELOCITY;
 }
 
+void Player::bigJump() {
+	velocity.y = BIG_JUMP_VELOCITY;
+}
 
 //update:
 void Player::update(float deltaTime, float windowWidth) {

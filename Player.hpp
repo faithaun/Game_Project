@@ -10,6 +10,7 @@ public:
 	void handleInput();
 	void applyGravity(float deltaTime);
 	void jump();
+	void bigJump();
 	void update(float deltaTime, float windowWidth);
 	void draw(sf::RenderWindow& window) const;
 
@@ -31,6 +32,7 @@ private:
 	static const float HEIGHT;
 	static const float GRAVITY;
 	static const float JUMP_VELOCITY;
+	static const float BIG_JUMP_VELOCITY;
 	static const float MOVE_SPEED;
 };
 

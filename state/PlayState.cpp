@@ -1,5 +1,6 @@
 #include "PlayState.hpp"
-#include "../Game.hpp"
+#include "../Game.hpp" 
+#include "../powerups/Spring.hpp"
 #include <cstdlib>
 #include <cmath>
 #include <ctime>
@@ -9,11 +10,26 @@
 namespace {
 	constexpr float WINDOW_WIDTH = 540.f;
 	constexpr float WINDOW_HEIGHT = 700.f;
+
 	constexpr float PLATFORM_WIDTH = 70.f;
 	constexpr float PLATFORM_HEIGHT = 15.f;
-	constexpr int PLATFORM_COUNT = 12;                // 12 min platforms, per spec
-	constexpr float PLATFORM_SPACING = 70.f;
+	constexpr int PLATFORM_COUNT = 20;                // 12 min platforms, per spec
+
+	constexpr float EASY_MIN_SPACING = 35.f;
+	constexpr float EASY_MAX_SPACING = 55.f;
+	constexpr float HARD_MIN_SPACING = 50.f;
+	constexpr float HARD_MAX_SPACING = 80.f;
+	constexpr int DIFFICULTY_SCORE = 150;
+
 	constexpr float GAME_OVER_MARGIN = 700.f;
+
+
+	float randomSpacing(int currentScore) {
+		float minSpacing = (currentScore >= DIFFICULTY_SCORE) ? HARD_MIN_SPACING : EASY_MIN_SPACING;
+		float maxSpacing = (currentScore >= DIFFICULTY_SCORE) ? HARD_MAX_SPACING : EASY_MAX_SPACING;
+		float range = maxSpacing - minSpacing;
+		return minSpacing + static_cast<float>(std::rand() % static_cast<int>(range + 1));
+	}
 }
 
 PlayState::PlayState(Game& game) : game(game),
@@ -27,7 +43,11 @@ PlayState::PlayState(Game& game) : game(game),
 	fontLoaded(false) {
 	
 	std::srand(static_cast<unsigned int>(std::time(nullptr)));
-	
+	springUnlockScore = 300 + (std::rand() % 201);     //random threshold each game
+	maxSpringThisGame = 2 + (std::rand() % 2);
+	springSpawnedSoFar = 0;
+	std::cerr << "Spring unlock score: " << springUnlockScore << ", max springs: " << maxSpringThisGame << std::endl;
+
  	//font 	
 	fontLoaded = font.loadFromFile("resources/LuckiestGuy.ttf");
 	if (!fontLoaded) {	
@@ -40,7 +60,9 @@ PlayState::PlayState(Game& game) : game(game),
 	}
 	backgroundSprite.setTexture(backgroundTexture);
 	sf::Vector2u texSize = backgroundTexture.getSize();
-	backgroundSprite.setScale(WINDOW_WIDTH / texSize.x, WINDOW_HEIGHT / texSize.y); 
+	if (texSize.x > 0 && texSize.y > 0) {
+		backgroundSprite.setScale(WINDOW_WIDTH / texSize.x, WINDOW_HEIGHT / texSize.y); 
+	} 
 
 	scoreText.setFont(font);
 	scoreText.setCharacterSize(24);
@@ -89,9 +111,14 @@ void PlayState::spawnPlatforms() {
 			: static_cast<float>(std::rand() % static_cast<int>(WINDOW_WIDTH - PLATFORM_WIDTH));
 
 		platform.shape.setPosition(x, y);
-		platforms.push_back(platform);
 
-		y -= PLATFORM_SPACING;
+		if (i != 0 && score >= springUnlockScore && std::rand() % 10 == 0) {
+			platform.attachedPowerUp = std::make_unique<Spring>( 
+				sf::Vector2f(x + PLATFORM_WIDTH / 2.f - 10.f, y - 20.f));
+			springSpawnedSoFar++;
+		} 
+		platforms.push_back(std::move(platform));
+		y -= randomSpacing(score);
 	} 
 }
 
@@ -106,9 +133,19 @@ void PlayState::recyclePlatforms() {
 	
 	for (auto& platform : platforms) {
 		if (platform.shape.getPosition().y > visibleBottom + PLATFORM_HEIGHT) {
-			highestPlatformY -= PLATFORM_SPACING;
+			highestPlatformY -= randomSpacing(score);
 			float x = static_cast<float>(std::rand() % static_cast<int>(WINDOW_WIDTH - PLATFORM_WIDTH));
+			
 			platform.shape.setPosition(x, highestPlatformY);
+
+			if (score >= springUnlockScore && springSpawnedSoFar < maxSpringThisGame && 
+				std::rand() % 10 == 0) {
+				platform.attachedPowerUp = std::make_unique<Spring>(
+					sf::Vector2f(x + PLATFORM_WIDTH / 2.f - 10.f, highestPlatformY - 20.f));
+				springSpawnedSoFar++;
+			} else { 
+				platform.attachedPowerUp = nullptr;
+			}
 		}
 	} 
 }
@@ -132,6 +169,7 @@ void PlayState::handleCollisions(float previousPlayerBottom) {
 		bool crossedTopThisFrame = 
 			previousPlayerBottom <= platformBounds.top &&
 			currentBottom >= platformBounds.top;
+
 		if (horizontalOverlap && crossedTopThisFrame) {
 			sf::Vector2f pos = player.getPosition();
 			float newCenterY = platformBounds.top - playerBounds.height / 2.f;
@@ -141,6 +179,23 @@ void PlayState::handleCollisions(float previousPlayerBottom) {
 		} 
 	} 
 }
+
+void PlayState::checkPowerUps() {
+	sf::FloatRect playerBounds = player.getBounds();
+	
+	for (auto& platform : platforms) {
+		if (!platform.attachedPowerUp) {
+			continue;
+		} 
+		if (playerBounds.intersects(platform.attachedPowerUp->getBounds())) {
+			platform.attachedPowerUp->apply(player);      //polymorphic - each power up definesits own effect
+			if (platform.attachedPowerUp->consumedOnUse()) {
+				platform.attachedPowerUp.reset();
+			} 
+		}
+	}
+}
+	
 
 
 void PlayState::updateCamera() {
@@ -154,7 +209,7 @@ void PlayState::updateCamera() {
 	if (cameraFollowingDown) {
 		//track the player while falling
 		cameraCenterY = player.getPosition().y - WINDOW_HEIGHT / 2.f + 100.f;
-	}
+	} 
 	else { 
 		// climb, camera moves up
 		float desiredCenterY = player.getPosition().y;
@@ -169,14 +224,18 @@ void PlayState::updateCamera() {
 void PlayState::updateScore() {
 	bestHeightY = std::min(bestHeightY, player.getPosition().y);
 	float startY = WINDOW_HEIGHT - 100.f;
-	score = std::max(0, static_cast<int>((startY - bestHeightY) / 10.f));
-	if (score < 0) score = 0;
+	score = std::max(0, static_cast<int>((startY - bestHeightY) / 2.f));
 
 	scoreText.setString("Score: " + std::to_string(score));
 }
 
 void PlayState::restartGame() {
 	player.reset(WINDOW_WIDTH / 2.f, WINDOW_HEIGHT - 100.f);
+
+	springUnlockScore = 300 + (std::rand() % 201);
+	maxSpringThisGame = 2 + (std::rand() % 2);
+	springSpawnedSoFar = 0;
+
 	spawnPlatforms();
 
 	cameraCenterY = WINDOW_HEIGHT / 2.f;
@@ -208,6 +267,7 @@ void PlayState::update(float deltaTime) {
 	player.update(deltaTime, WINDOW_WIDTH);
 	
 	handleCollisions(previousBottom);
+	checkPowerUps();
 	recyclePlatforms();
 	updateCamera();
 	updateScore();
@@ -220,11 +280,11 @@ void PlayState::update(float deltaTime) {
 
 void PlayState::render(sf::RenderWindow& window) {
 	window.setView(gameView);
-	window.clear(sf::Color());
+	window.clear();
+
 	float topOfView = cameraCenterY - WINDOW_HEIGHT / 2.f;
 	float tileIndex = std::floor(topOfView / WINDOW_HEIGHT);
-	float tileY = tileIndex * WINDOW_HEIGHT;
-	
+	float tileY = tileIndex * WINDOW_HEIGHT;	
 	backgroundSprite.setPosition(0.f, tileY);
 	window.draw(backgroundSprite);
 	backgroundSprite.setPosition(0.f, tileY + WINDOW_HEIGHT);
@@ -232,6 +292,9 @@ void PlayState::render(sf::RenderWindow& window) {
 
 	for (const auto& platform : platforms) {
 		window.draw(platform.shape);
+		if (platform.attachedPowerUp) {
+			platform.attachedPowerUp->draw(window);
+		}
 	}
 
 	player.draw(window);
