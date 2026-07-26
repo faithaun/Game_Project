@@ -42,6 +42,8 @@ private:
 	int score;
 	bool isGameOver;
 	bool isFallingFromBirdHit;
+	int birdsSpawnedThisBlock;
+	int currentScoreBlock;
 	int springUnlockScore;
 	int maxSpringThisGame;
 	int springSpawnedSoFar;

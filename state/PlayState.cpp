@@ -45,6 +45,8 @@ PlayState::PlayState(Game& game) : game(game),
 	score(0), 
 	isGameOver(false), 
 	isFallingFromBirdHit(false),
+	birdsSpawnedThisBlock(0),
+	currentScoreBlock(0),
 	cameraFollowingDown(false),
 	fallStartBottomY(0.f),
 	fontLoaded(false) {
@@ -212,7 +214,17 @@ void PlayState::checkPowerUps() {
 void PlayState::spawnObstacles(float deltaTime) {
 	obstacleSpawnTimer -= deltaTime;
 
-	if (score >= OBSTACLE_UNLOCK_SCORE ||  !obstacles.empty() || obstacleSpawnTimer > 0.f) {
+	int thisBlock = score / 20000;
+	if (thisBlock != currentScoreBlock) {
+		currentScoreBlock = thisBlock;
+		birdsSpawnedThisBlock = 0;
+	}
+
+	if (birdsSpawnedThisBlock >= 12) {
+		return;     //hit the cap for this 20,000 score block
+	}
+
+	if (score < OBSTACLE_UNLOCK_SCORE ||  !obstacles.empty() || obstacleSpawnTimer > 0.f) {
 		return;
 	}
 
@@ -245,6 +257,7 @@ void PlayState::spawnObstacles(float deltaTime) {
 		}
 		if (!overlapsAnyPlatform) {
 			obstacles.push_back(std::make_unique<Bird>(sf::Vector2f(x, y)));
+			birdsSpawnedThisBlock++;
 			obstacleSpawnTimer = 10.f + static_cast<float>(std::rand() % 8);
 			return;
 		}
@@ -328,6 +341,8 @@ void PlayState::restartGame() {
 	spawnPlatforms();
 	obstacles.clear();
 	isFallingFromBirdHit = false;
+	birdsSpawnedThisBlock = 0;
+	currentScoreBlock = 0;
 	obstacleSpawnTimer = 3.f;
 
 	cameraCenterY = WINDOW_HEIGHT / 2.f;
