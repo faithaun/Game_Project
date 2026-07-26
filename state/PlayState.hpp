@@ -6,6 +6,7 @@
 #include "GameState.hpp"
 #include "../Player.hpp"
 #include "../powerups/PowerUp.hpp"
+#include "../obstacles/Obstacle.hpp"
 #include <vector>
 #include <memory>
 
@@ -15,6 +16,7 @@ class Game;
 struct Platform {
 	sf::RectangleShape shape;
 	std::unique_ptr<PowerUp>attachedPowerUp;	 //nullptr if this platform has none
+	std::vector<std::unique_ptr<Obstacle>> obstacles;
 };
 
 class PlayState : public GameState {
@@ -30,7 +32,8 @@ private:
 	Game& game;
 	Player player;
 	std::vector<Platform> platforms;
-	
+	std::vector<std::unique_ptr<Obstacle>>obstacles;	
+
 	sf::Texture backgroundTexture;
 	sf::Sprite backgroundSprite;
 	sf::View gameView;  //scrolling camera
@@ -38,9 +41,11 @@ private:
 	float bestHeightY;    //highest Y the player has ever reach for score
 	int score;
 	bool isGameOver;
+	bool isFallingFromBirdHit;
 	int springUnlockScore;
 	int maxSpringThisGame;
 	int springSpawnedSoFar;
+	float obstacleSpawnTimer;
 	bool cameraFollowingDown;
 	float fallStartBottomY;
 
@@ -52,7 +57,12 @@ private:
 
 	void spawnPlatforms();
 	void recyclePlatforms();
-	void handleCollisions(float previousPlayerBottom);
+	void handleCollisions(float previousPlayerBottom); 
+
+	void spawnObstacles(float deltaTime);
+	void recycleObstacles();
+	void checkObstacles(float previousPlayerBottom);
+
 	void updateCamera();
 	void checkPowerUps();
 	void updateScore();

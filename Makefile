@@ -4,7 +4,7 @@ LDFLAGS := -lsfml-graphics -lsfml-window -lsfml-system
 
 TARGET := main
 
-SOURCES :=  main.cpp Game.cpp Player.cpp  state/MainMenuState.cpp state/PlayState.cpp ui/Button.cpp powerups/PowerUp.cpp powerups/Spring.cpp
+SOURCES :=  main.cpp Game.cpp Player.cpp  state/MainMenuState.cpp state/PlayState.cpp ui/Button.cpp powerups/PowerUp.cpp powerups/Spring.cpp obstacles/Obstacle.cpp obstacles/Bird.cpp
 .PHONY: all run clean
 
 all: $(TARGET)

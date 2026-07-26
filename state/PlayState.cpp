@@ -1,6 +1,7 @@
 #include "PlayState.hpp"
 #include "../Game.hpp" 
 #include "../powerups/Spring.hpp"
+#include "../obstacles/Bird.hpp"
 #include <cstdlib>
 #include <cmath>
 #include <ctime>
@@ -22,6 +23,11 @@ namespace {
 	constexpr int DIFFICULTY_SCORE = 150;
 
 	constexpr float GAME_OVER_MARGIN = 700.f;
+	
+	//obstacles: 
+	constexpr int OBSTACLE_UNLOCK_SCORE = 1200; //birds start appear after this score
+	constexpr float BIRD_WIDTH = 40.f;
+	constexpr float BIRD_HEIGHT = 30.f;
 
 
 	float randomSpacing(int currentScore) {
@@ -38,6 +44,7 @@ PlayState::PlayState(Game& game) : game(game),
 	bestHeightY(WINDOW_HEIGHT - 100.f), 
 	score(0), 
 	isGameOver(false), 
+	isFallingFromBirdHit(false),
 	cameraFollowingDown(false),
 	fallStartBottomY(0.f),
 	fontLoaded(false) {
@@ -45,7 +52,8 @@ PlayState::PlayState(Game& game) : game(game),
 	std::srand(static_cast<unsigned int>(std::time(nullptr)));
 	springUnlockScore = 300 + (std::rand() % 201);     //random threshold each game
 	maxSpringThisGame = 2 + (std::rand() % 2);
-	springSpawnedSoFar = 0;
+	springSpawnedSoFar = 0; 
+	obstacleSpawnTimer = 3.f;   //seconds until first bird is even considered
 	std::cerr << "Spring unlock score: " << springUnlockScore << ", max springs: " << maxSpringThisGame << std::endl;
 
  	//font 	
@@ -54,7 +62,7 @@ PlayState::PlayState(Game& game) : game(game),
 		std::cerr << "Warning: could not load font -- but gameplay continues normally." << std::endl;
 	}
 
-	
+	//background
 	if (!backgroundTexture.loadFromFile("resources/playbackground.png")) {
 		std::cerr << "Warning: could not load resources/playbackground.png" << std::endl;
 	}
@@ -151,6 +159,10 @@ void PlayState::recyclePlatforms() {
 }
 
 void PlayState::handleCollisions(float previousPlayerBottom) {
+	if (isFallingFromBirdHit) {
+		return;
+	}
+
 	if (player.getVelocityY() <= 0.f) {
 		return;
 	}
@@ -197,6 +209,83 @@ void PlayState::checkPowerUps() {
 }
 	
 
+void PlayState::spawnObstacles(float deltaTime) {
+	obstacleSpawnTimer -= deltaTime;
+
+	if (score >= OBSTACLE_UNLOCK_SCORE ||  !obstacles.empty() || obstacleSpawnTimer > 0.f) {
+		return;
+	}
+
+	float topOfView = cameraCenterY - WINDOW_HEIGHT / 2.f;
+	//consider space cleary above the player current position
+	float upperBound = topOfView - 100.f;
+	float lowerBound = player.getPosition().y - 150.f;
+		
+	if (lowerBound <= upperBound) {
+		obstacleSpawnTimer = 0.3f;   // not enough room above - check again
+		return;
+	}
+
+	const int MAX_ATTEMPTS = 30;
+	const float MARGIN = 30.f; //requred clearnace around the bird
+
+	for (int attempt = 0; attempt < MAX_ATTEMPTS; ++attempt) {
+		//pick x anywhere acroos width, guarantee open space
+		float x = 30.f + static_cast<float>(std::rand() % static_cast<int>(WINDOW_WIDTH - BIRD_WIDTH - 60.f));
+		float y = upperBound + static_cast<float>(std::rand() % static_cast<int>(lowerBound - upperBound));
+	
+		//check actual rectangle overlap against every platform (not top or squeeze)
+		sf::FloatRect candidateBounds(x - MARGIN, y - MARGIN, BIRD_WIDTH + MARGIN * 2.f, BIRD_HEIGHT + MARGIN *2.f);
+		bool overlapsAnyPlatform = false;
+		for (const auto& platform : platforms) {
+			if (candidateBounds.intersects(platform.shape.getGlobalBounds())) {
+				overlapsAnyPlatform = true;
+				break;
+			}
+		}
+		if (!overlapsAnyPlatform) {
+			obstacles.push_back(std::make_unique<Bird>(sf::Vector2f(x, y)));
+			obstacleSpawnTimer = 10.f + static_cast<float>(std::rand() % 8);
+			return;
+		}
+	}
+	obstacleSpawnTimer = 0.3f;  //no valid spot - try again
+}		
+
+void PlayState::recycleObstacles() {
+	float visibleBottom = cameraCenterY + WINDOW_HEIGHT / 2.f;
+	// remove obstacles that have scorred below visible area
+	obstacles.erase ( 
+		std::remove_if(obstacles.begin(), obstacles.end(), [visibleBottom](const std::unique_ptr<Obstacle>& o) {	
+		return o->getBounds().top > visibleBottom + 40.f;
+	}),
+	obstacles.end());
+}
+
+void PlayState::checkObstacles(float previousPlayerBottom) {
+	sf::FloatRect playerBounds = player.getBounds();
+	float currentBottom = playerBounds.top + playerBounds.height;
+
+	for (auto& obstacle : obstacles) {
+		sf::FloatRect obstacleBounds = obstacle->getBounds();
+
+		if (!playerBounds.intersects(obstacleBounds)) {
+			continue;
+		} 
+
+		bool landedOnTop = 
+			player.getVelocityY() > 0.f && previousPlayerBottom <= obstacleBounds.top && 
+			currentBottom >= obstacleBounds.top;
+		if (landedOnTop) {
+			obstacle->onLandedOnTop(player);
+		} else {
+			if (obstacle->onHitFromBelow(player)) {
+				isFallingFromBirdHit = true;
+				player.setVelocityY(500.f);   //force a hard downward fall
+			} 
+		} 
+	}
+}
 
 void PlayState::updateCamera() {
 	float frozenBottom = cameraCenterY + WINDOW_HEIGHT / 2.f;
@@ -237,6 +326,9 @@ void PlayState::restartGame() {
 	springSpawnedSoFar = 0;
 
 	spawnPlatforms();
+	obstacles.clear();
+	isFallingFromBirdHit = false;
+	obstacleSpawnTimer = 3.f;
 
 	cameraCenterY = WINDOW_HEIGHT / 2.f;
 	gameView.setCenter(WINDOW_WIDTH / 2.f, cameraCenterY);
@@ -269,6 +361,15 @@ void PlayState::update(float deltaTime) {
 	handleCollisions(previousBottom);
 	checkPowerUps();
 	recyclePlatforms();
+
+	for (auto& obstacle : obstacles) {
+		obstacle->update(deltaTime); //delegates each obstacle own movement strategy
+	}
+	checkObstacles(previousBottom);
+	spawnObstacles(deltaTime);
+	recycleObstacles();
+
+
 	updateCamera();
 	updateScore();
 
@@ -296,6 +397,10 @@ void PlayState::render(sf::RenderWindow& window) {
 			platform.attachedPowerUp->draw(window);
 		}
 	}
+
+	for (const auto& obstacle : obstacles) {
+		obstacle->draw(window);
+	} 
 
 	player.draw(window);
 	
