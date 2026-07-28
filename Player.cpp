@@ -5,11 +5,11 @@ const float Player::WIDTH = 40.f;
 const float Player::HEIGHT = 40.f;
 const float Player::GRAVITY = 900.f;         //pulls player down
 const float Player::JUMP_VELOCITY = -520.f;      // negative = upward
-const float Player::BIG_JUMP_VELOCITY = -780.f;
+const float Player::BIG_JUMP_VELOCITY = -780.f;   //stronger upward boose for spring
 const float Player::MOVE_SPEED = 300.f;       // horizontal speed
 
 
-
+//constructor: set up visual shape and initial state
 Player::Player(float startX, float startY) : velocity(0.f, 0.f) {
 	shape.setSize(sf::Vector2f(WIDTH, HEIGHT));
 	shape.setFillColor(sf::Color::Green);
@@ -27,9 +27,16 @@ void Player::handleInput() {
 	if (sf::Keyboard::isKeyPressed(sf::Keyboard::Right) || sf::Keyboard::isKeyPressed(sf::Keyboard::D)) {
 		velocity.x = MOVE_SPEED;
 	}
+	
+	//edge-detect space - only counts as press the frame it goes from up to down
+	bool spaceIsDown = sf::Keyboard::isKeyPressed(sf::Keyboard::Space);
+	if (spaceIsDown && !spaceWasDown) {
+		firePressedThisFrame = true;
+	}
+	spaceWasDown = spaceIsDown;
 } 
 
-//apply gravity
+//apply gravity: add downwards acceleration to vertical velocity
 void Player::applyGravity (float deltaTime) {	
 	velocity.y += GRAVITY * deltaTime;
 }
@@ -43,7 +50,7 @@ void Player::bigJump() {
 	velocity.y = BIG_JUMP_VELOCITY;
 }
 
-//update:
+//update: applies gravity, integrate velocity into position, and wraps player left/right screen edges
 void Player::update(float deltaTime, float windowWidth) {
 	applyGravity(deltaTime);
 	shape.move(velocity.x * deltaTime, velocity.y * deltaTime);
@@ -89,4 +96,40 @@ void Player::setVelocityY(float vy) {
 void Player::reset(float x, float y) {
 	shape.setPosition(x, y);
 	velocity = sf::Vector2f(0.f, 0.f);
+	ammo = 0;
+	bananasCollected = 0;
+} 
+
+
+//ammo/shooting
+int Player::getAmmo() const {
+	return ammo;
+}
+
+void Player::addAmmo(int amount) {
+	ammo += amount;
+}
+
+void Player::recordBananaCollected() {
+	bananasCollected++;
+}
+
+int Player::getBananaCollected() const {
+	return bananasCollected;
+}
+
+bool Player::hasAmmo() const {
+	return ammo > 0;
+}
+
+void Player::useAmmo() {
+	if (ammo > 0) {
+		ammo--;
+	}
+}
+
+bool Player::consumeFirePressed() {
+	bool wasPressed = firePressedThisFrame;
+	firePressedThisFrame = false;  //reset - only true for one frame per press
+	return wasPressed;
 }

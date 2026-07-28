@@ -7,6 +7,7 @@
 #include "../Player.hpp"
 #include "../powerups/PowerUp.hpp"
 #include "../obstacles/Obstacle.hpp"
+#include "../bullet/BulletPool.hpp"
 #include <vector>
 #include <memory>
 
@@ -16,7 +17,6 @@ class Game;
 struct Platform {
 	sf::RectangleShape shape;
 	std::unique_ptr<PowerUp>attachedPowerUp;	 //nullptr if this platform has none
-	std::vector<std::unique_ptr<Obstacle>> obstacles;
 };
 
 class PlayState : public GameState {
@@ -33,6 +33,7 @@ private:
 	Player player;
 	std::vector<Platform> platforms;
 	std::vector<std::unique_ptr<Obstacle>>obstacles;	
+	BulletPool bulletPool;
 
 	sf::Texture backgroundTexture;
 	sf::Sprite backgroundSprite;
@@ -43,6 +44,7 @@ private:
 	bool isGameOver;
 	bool isFallingFromBirdHit;
 	int birdsSpawnedThisBlock;
+
 	int currentScoreBlock;
 	int springUnlockScore;
 	int maxSpringThisGame;
@@ -57,6 +59,11 @@ private:
 	sf::Text gameOverText;
 	sf::Text restartText;
 
+	sf::Texture bananaIconTexture;
+	sf::Sprite bananaIconSprite;
+	sf::Text bananaCountText;
+	sf::Text ammoText;
+
 	void spawnPlatforms();
 	void recyclePlatforms();
 	void handleCollisions(float previousPlayerBottom); 
@@ -64,6 +71,7 @@ private:
 	void spawnObstacles(float deltaTime);
 	void recycleObstacles();
 	void checkObstacles(float previousPlayerBottom);
+	void checkBulletHits();
 
 	void updateCamera();
 	void checkPowerUps();

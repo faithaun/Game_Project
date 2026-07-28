@@ -1,6 +1,7 @@
 #include "PlayState.hpp"
 #include "../Game.hpp" 
 #include "../powerups/Spring.hpp"
+#include "../powerups/Banana.hpp"
 #include "../obstacles/Bird.hpp"
 #include <cstdlib>
 #include <cmath>
@@ -22,7 +23,9 @@ namespace {
 	constexpr float HARD_MAX_SPACING = 80.f;
 	constexpr int DIFFICULTY_SCORE = 150;
 
-	constexpr float GAME_OVER_MARGIN = 700.f;
+	constexpr int SPRING_UNLOCK_SCORE = 500;
+	constexpr int BANANA_UNLOCK_SCORE = 200;   //banana start appearing this score
+	constexpr float GAME_OVER_MARGIN = 700.f;   //how far the camera follows the fall before freezing
 	
 	//obstacles: 
 	constexpr int OBSTACLE_UNLOCK_SCORE = 1200; //birds start appear after this score
@@ -39,7 +42,8 @@ namespace {
 }
 
 PlayState::PlayState(Game& game) : game(game),
-	player(WINDOW_WIDTH / 2.f, WINDOW_HEIGHT - 100.f),
+	player(WINDOW_WIDTH / 2.f, WINDOW_HEIGHT - 100.f), 
+	bulletPool(20),     //pool of 20 reusable bullets
 	cameraCenterY(WINDOW_HEIGHT / 2.f),
 	bestHeightY(WINDOW_HEIGHT - 100.f), 
 	score(0), 
@@ -47,6 +51,8 @@ PlayState::PlayState(Game& game) : game(game),
 	isFallingFromBirdHit(false),
 	birdsSpawnedThisBlock(0),
 	currentScoreBlock(0),
+	obstacleSpawnTimer(3.f),
+
 	cameraFollowingDown(false),
 	fallStartBottomY(0.f),
 	fontLoaded(false) {
@@ -78,7 +84,26 @@ PlayState::PlayState(Game& game) : game(game),
 	scoreText.setCharacterSize(24);
 	scoreText.setFillColor(sf::Color::Black);
 	scoreText.setPosition(10.f, 10.f);
+	
+	//banana icon + running total
+	if (!bananaIconTexture.loadFromFile("resources/banana.png")) {
+		std::cerr << "Warning: could not load resources/Banana.png" << std::endl;
+	}
+	bananaIconSprite.setTexture(bananaIconTexture);
+	bananaIconSprite.setScale(0.5f, 0.5f);
+	bananaIconSprite.setPosition(10.f, 40.f);
 
+	bananaCountText.setFont(font);
+	bananaCountText.setCharacterSize(20);
+	bananaCountText.setFillColor(sf::Color::Black);
+	bananaCountText.setPosition(45.f, 42.f);
+		
+	//live ammo count 
+	ammoText.setFont(font);
+	ammoText.setCharacterSize(22);
+	ammoText.setFillColor(sf::Color::Black);
+	ammoText.setPosition(WINDOW_WIDTH - 110.f, 10.f);
+	
 	gameOverText.setFont(font);
 	gameOverText.setCharacterSize(48);
 	gameOverText.setFillColor(sf::Color::Red);
@@ -125,8 +150,11 @@ void PlayState::spawnPlatforms() {
 		if (i != 0 && score >= springUnlockScore && std::rand() % 10 == 0) {
 			platform.attachedPowerUp = std::make_unique<Spring>( 
 				sf::Vector2f(x + PLATFORM_WIDTH / 2.f - 10.f, y - 20.f));
-			springSpawnedSoFar++;
+		} else if (i != 0 && score >= BANANA_UNLOCK_SCORE && std::rand() % 12 == 0) {
+			platform.attachedPowerUp = std::make_unique<Banana>(
+				sf::Vector2f(x + PLATFORM_WIDTH / 2.f - 11.f, y - 22.f));
 		} 
+
 		platforms.push_back(std::move(platform));
 		y -= randomSpacing(score);
 	} 
@@ -144,15 +172,17 @@ void PlayState::recyclePlatforms() {
 	for (auto& platform : platforms) {
 		if (platform.shape.getPosition().y > visibleBottom + PLATFORM_HEIGHT) {
 			highestPlatformY -= randomSpacing(score);
-			float x = static_cast<float>(std::rand() % static_cast<int>(WINDOW_WIDTH - PLATFORM_WIDTH));
-			
+			float x = static_cast<float>(std::rand() % static_cast<int>(WINDOW_WIDTH - PLATFORM_WIDTH));			
 			platform.shape.setPosition(x, highestPlatformY);
 
+			// re-roll the attached power-up fresha t this paltform new position
 			if (score >= springUnlockScore && springSpawnedSoFar < maxSpringThisGame && 
 				std::rand() % 10 == 0) {
 				platform.attachedPowerUp = std::make_unique<Spring>(
 					sf::Vector2f(x + PLATFORM_WIDTH / 2.f - 10.f, highestPlatformY - 20.f));
-				springSpawnedSoFar++;
+			} else if (score >= BANANA_UNLOCK_SCORE && std::rand() % 12 == 0) {
+				platform.attachedPowerUp = std::make_unique<Banana>(
+					sf::Vector2f(x + PLATFORM_WIDTH / 2.f - 11.f, highestPlatformY - 22.f));
 			} else { 
 				platform.attachedPowerUp = nullptr;
 			}
@@ -162,7 +192,7 @@ void PlayState::recyclePlatforms() {
 
 void PlayState::handleCollisions(float previousPlayerBottom) {
 	if (isFallingFromBirdHit) {
-		return;
+		return;      // ignore all platform - player falls straight through
 	}
 
 	if (player.getVelocityY() <= 0.f) {
@@ -300,6 +330,25 @@ void PlayState::checkObstacles(float previousPlayerBottom) {
 	}
 }
 
+void PlayState::checkBulletHits() {
+	//check each active bullet from pool against every obstacle on hit
+	for (auto& bullet : bulletPool.getBullets()) {
+		if (!bullet.isActive()) {
+			continue;
+		} 
+	
+		for (auto it = obstacles.begin(); it != obstacles.end(); ++it) {
+			if (bullet.getBounds().intersects((*it)->getBounds())) {
+				bullet.deactivate();
+				obstacles.erase(it);
+				break;    // bullet is used up and move to next one
+			}
+		}
+	}
+}
+
+
+
 void PlayState::updateCamera() {
 	float frozenBottom = cameraCenterY + WINDOW_HEIGHT / 2.f;
 	
@@ -329,6 +378,8 @@ void PlayState::updateScore() {
 	score = std::max(0, static_cast<int>((startY - bestHeightY) / 2.f));
 
 	scoreText.setString("Score: " + std::to_string(score));
+	bananaCountText.setString(std::to_string(player.getBananaCollected()));
+	ammoText.setString("Ammo: " + std::to_string(player.getAmmo()));
 }
 
 void PlayState::restartGame() {
@@ -377,6 +428,14 @@ void PlayState::update(float deltaTime) {
 	checkPowerUps();
 	recyclePlatforms();
 
+	//fire bullet on fresh space press, if player has ammo
+	if (player.consumeFirePressed() && player.hasAmmo()) {
+		player.useAmmo();
+		bulletPool.fire(sf::Vector2f(player.getPosition().x - 5.f, player.getPosition().y - 20.f));
+	}
+	bulletPool.update(deltaTime, cameraCenterY - WINDOW_HEIGHT / 2.f);
+	checkBulletHits();
+
 	for (auto& obstacle : obstacles) {
 		obstacle->update(deltaTime); //delegates each obstacle own movement strategy
 	}
@@ -416,11 +475,14 @@ void PlayState::render(sf::RenderWindow& window) {
 	for (const auto& obstacle : obstacles) {
 		obstacle->draw(window);
 	} 
-
+	bulletPool.draw(window);
 	player.draw(window);
 	
 	window.setView(window.getDefaultView());
 	window.draw(scoreText);
+	window.draw(bananaIconSprite);
+	window.draw(bananaCountText);
+	window.draw(ammoText);
 
 	if (isGameOver) {
 		window.draw(gameOverText);
