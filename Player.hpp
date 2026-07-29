@@ -55,6 +55,8 @@ public:
 
 private:
 	sf::RectangleShape shape;  //represent the player
+	sf::Texture texture;
+	sf::Sprite sprite;
 	sf::Vector2f velocity;        //current velocity
 	
 	int ammo = 0; 

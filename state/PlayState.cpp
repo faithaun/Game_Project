@@ -14,8 +14,8 @@ namespace {
 	constexpr float WINDOW_WIDTH = 540.f;
 	constexpr float WINDOW_HEIGHT = 700.f;
 
-	constexpr float PLATFORM_WIDTH = 70.f;
-	constexpr float PLATFORM_HEIGHT = 15.f;
+	constexpr float PLATFORM_WIDTH = 80.f;
+	constexpr float PLATFORM_HEIGHT = 60.f;
 	constexpr int PLATFORM_COUNT = 20;                // 12 min platforms, per spec
 
 	constexpr float EASY_MIN_SPACING = 35.f;

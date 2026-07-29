@@ -1,4 +1,5 @@
 #include "Player.hpp"
+#include <iostream>
 
 //definition of tunable constants
 const float Player::WIDTH = 40.f;
@@ -12,9 +13,20 @@ const float Player::MOVE_SPEED = 300.f;       // horizontal speed
 //constructor: set up visual shape and initial state
 Player::Player(float startX, float startY) : velocity(0.f, 0.f) {
 	shape.setSize(sf::Vector2f(WIDTH, HEIGHT));
-	shape.setFillColor(sf::Color::Green);
 	shape.setOrigin(WIDTH / 2.f, HEIGHT / 2.f);
 	shape.setPosition(startX, startY);
+	
+	if (!texture.loadFromFile("resources/monkey.png")) {
+		std::cerr << "Warning: could not load player.png" << std::endl;
+	}
+	sprite.setTexture(texture);
+	sf::Vector2u texSize = texture.getSize();
+	if (texSize.x > 0 && texSize.y > 0) {
+		float visualScale = 1.5f; // 50% bigger
+		sprite.setScale(visualScale * WIDTH / texSize.x, visualScale * HEIGHT / texSize.y);
+	}
+	sprite.setOrigin(texSize.x / 2.f, texSize.y / 2.f);
+	sprite.setPosition(startX, startY);
 }
 
 //handle input: reads keuboard state, sets horizontal velocty
@@ -63,7 +75,8 @@ void Player::update(float deltaTime, float windowWidth) {
 		pos.x = -WIDTH / 2.f;
 	} 
 	shape.setPosition(pos);
-	
+	sprite.setPosition(pos);
+
 	if (shieldTimeRemaining > 0.f) {
 		shieldTimeRemaining -= deltaTime;
 		if (shieldTimeRemaining < 0.f) {
@@ -74,7 +87,7 @@ void Player::update(float deltaTime, float windowWidth) {
 
 //draw
 void Player::draw(sf::RenderWindow& window) const {	
-	window.draw(shape);
+	window.draw(sprite);
 } 
 
 //Getter
@@ -94,6 +107,7 @@ float Player::getVelocityY() const {
 //mutators
 void Player::setPosition(float x, float y) {
 	shape.setPosition(x, y);
+	sprite.setPosition(x, y);
 }
 
 void Player::setVelocityY(float vy) {
@@ -102,6 +116,7 @@ void Player::setVelocityY(float vy) {
 
 void Player::reset(float x, float y) {
 	shape.setPosition(x, y);
+	sprite.setPosition(x, y);
 	velocity = sf::Vector2f(0.f, 0.f);
 	ammo = 0;
 	bananasCollected = 0;
