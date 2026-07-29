@@ -1,4 +1,4 @@
-#ifndef PLATFORM_HPP
+#ifndef  PLATFORM_HPP
 #define PLATFORM_HPP 
 
 
@@ -6,18 +6,27 @@
 #include <memory>
 #include <iostream>
 #include "../powerups/PowerUp.hpp"
+#include "PlatformBehavior.hpp"
 
 //single platform, use a shared image of a plain colored rectangle
 struct Platform {     //why use struct?
 	sf::RectangleShape shape;	// used for position/size/collision
 	std::unique_ptr<PowerUp> attachedPowerUp;   //nullptr if its platform has none
+	std::unique_ptr<PlatformBehavior> behavior = std::make_unique<NormalBehavior>();
 
+	//advance moving/breaking logic
+	void update(float dt) {
+		behavior->update(shape, dt);
+	}
 
 	//draw platform image and its power up if it has one
 	void draw(sf::RenderWindow& window) const {
 		sf::Sprite sprite;
-		sprite.setTexture(getTexture());
 		
+		const sf::Texture* override = behavior->getTextureOverride();
+		const sf::Texture& textureToUse = override ? *override : getTexture();
+		sprite.setTexture(textureToUse);
+
 		sf::Vector2u texSize = getTexture().getSize();
 		sf::Vector2f shapeSize = shape.getSize();
 		if (texSize.x > 0 && texSize.y > 0) {
@@ -33,6 +42,9 @@ struct Platform {     //why use struct?
 	}
 
 	bool checklanding(const sf::FloatRect& playerBounds, float previousPlayerBottom) const {
+		if (!behavior->isSolid()) 
+			return false;   //broken platforms cant be landed
+
 		sf::FloatRect platformBounds = shape.getGlobalBounds();
 		float currentBottom = playerBounds.top + playerBounds.height;
 		
@@ -45,6 +57,12 @@ struct Platform {     //why use struct?
 			currentBottom >= platformBounds.top;
 	
 		return horizontalOverlap && crossedTopThisFrame;
+	}
+
+
+	//call right after checklanding returns true 
+	void notifyLanded() {
+		behavior->onLanded();
 	}
 
 	float getTop() const {

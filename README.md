@@ -1,4 +1,4 @@
-# ECE205SUM26FP 
+# Jungle Jumper  
 
 ## About
 

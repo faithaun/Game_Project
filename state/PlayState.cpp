@@ -4,6 +4,8 @@
 #include "../powerups/Banana.hpp"
 #include "../powerups/Shield.hpp"
 #include "../obstacles/Bird.hpp"
+#include "../platform/MovingBehavior.hpp"
+#include "../platform/BreakingBehavior.hpp"
 #include <cstdlib>
 #include <cmath>
 #include <ctime>
@@ -26,7 +28,9 @@ namespace {
 
 	constexpr int SPRING_UNLOCK_SCORE = 500;
 	constexpr int BANANA_UNLOCK_SCORE = 200;   //banana start appearing this score
-	constexpr int SHIELD_UNLOCK_SCORE = 150;
+	constexpr int SHIELD_UNLOCK_SCORE = 400;
+	constexpr int MOVING_PLATFORM_UNLOCK_SCORE = 400;
+	constexpr int BREAKING_PLATFORM_UNLOCK_SCORE = 600;
 	constexpr float GAME_OVER_MARGIN = 700.f;   //how far the camera follows the fall before freezing
 	
 	//obstacles: 
@@ -194,6 +198,18 @@ void PlayState::recyclePlatforms() {
 			} else { 
 				platform.attachedPowerUp = nullptr;
 			}
+			
+			//re-roll platform behavior
+			if (score >= BREAKING_PLATFORM_UNLOCK_SCORE && std::rand() % 10 == 0) {
+				platform.behavior = std::make_unique<BreakingBehavior>();
+			} else if (score >= MOVING_PLATFORM_UNLOCK_SCORE && std::rand() % 8 == 0) {
+				float speed = 80.f + static_cast<float>(std::rand() % 60);
+				float minX = 0.f; 
+				float maxX = static_cast<float>(WINDOW_WIDTH);
+				platform.behavior = std::make_unique<MovingBehavior>(minX, maxX, speed);
+			} else {
+				platform.behavior = std::make_unique<NormalBehavior>();
+			}
 		}
 	} 
 }
@@ -209,12 +225,13 @@ void PlayState::handleCollisions(float previousPlayerBottom) {
 	
 	sf::FloatRect playerBounds = player.getBounds();
 
-	for (const auto& platform : platforms) {
+	for (auto& platform : platforms) {
 		if (platform.checklanding(playerBounds, previousPlayerBottom)) {
 			sf::Vector2f pos = player.getPosition();
 			float newCenterY = platform.getTop() - playerBounds.height / 2.f;
 			player.setPosition(pos.x, newCenterY);
 			player.jump();
+			platform.notifyLanded(); 
 			break;
 		}
 	}
@@ -418,7 +435,10 @@ void PlayState::update(float deltaTime) {
 
 	player.handleInput();
 	player.update(deltaTime, WINDOW_WIDTH);
-	
+
+	for (auto& platform : platforms) {
+		platform.update(deltaTime);
+	}	
 	handleCollisions(previousBottom);
 	checkPowerUps();
 	recyclePlatforms();
