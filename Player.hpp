@@ -29,7 +29,6 @@ public:
 	sf::FloatRect getBounds() const;
 	sf::Vector2f getPosition() const;
 	float	getVelocityY() const;
-	int getAmmo() const;
 
 	//setters//mutators
 	void setPosition(float x, float y);
@@ -41,14 +40,18 @@ public:
 	void addAmmo(int amount);
 	bool hasAmmo() const;
 	void useAmmo();
-	
+	int getAmmo() const;
+		//return true exactly once per actual key press (not held-down repeacts, playstate use to decide to fire
+	bool consumeFirePressed();
+
 	//banana stat tracking - never decrease when shooting 
 	void recordBananaCollected();
 	int getBananaCollected() const;
 
-	//return true exactly once per actual key press (not held-down repeacts) 
-	//palystate use this to decide whether to fire
-	bool consumeFirePressed();
+	//Shield
+	void activateShield(float duration);
+	bool isShieldActive() const;
+
 
 private:
 	sf::RectangleShape shape;  //represent the player
@@ -58,6 +61,8 @@ private:
 	int bananasCollected = 0;
 	bool spaceWasDown = false;
 	bool firePressedThisFrame = false;
+
+	float shieldTimeRemaining = 0.f;
 
 	static const float WIDTH;
 	static const float HEIGHT;

@@ -4,6 +4,7 @@
 
 #pragma once
 #include "GameState.hpp"
+#include "../platform/Platform.hpp"
 #include "../Player.hpp"
 #include "../powerups/PowerUp.hpp"
 #include "../obstacles/Obstacle.hpp"
@@ -12,12 +13,6 @@
 #include <memory>
 
 class Game;
-
-//playform simple dont need own class or file
-struct Platform {
-	sf::RectangleShape shape;
-	std::unique_ptr<PowerUp>attachedPowerUp;	 //nullptr if this platform has none
-};
 
 class PlayState : public GameState {
 public:

@@ -2,6 +2,7 @@
 #include "../Game.hpp" 
 #include "../powerups/Spring.hpp"
 #include "../powerups/Banana.hpp"
+#include "../powerups/Shield.hpp"
 #include "../obstacles/Bird.hpp"
 #include <cstdlib>
 #include <cmath>
@@ -25,6 +26,7 @@ namespace {
 
 	constexpr int SPRING_UNLOCK_SCORE = 500;
 	constexpr int BANANA_UNLOCK_SCORE = 200;   //banana start appearing this score
+	constexpr int SHIELD_UNLOCK_SCORE = 150;
 	constexpr float GAME_OVER_MARGIN = 700.f;   //how far the camera follows the fall before freezing
 	
 	//obstacles: 
@@ -153,6 +155,9 @@ void PlayState::spawnPlatforms() {
 		} else if (i != 0 && score >= BANANA_UNLOCK_SCORE && std::rand() % 12 == 0) {
 			platform.attachedPowerUp = std::make_unique<Banana>(
 				sf::Vector2f(x + PLATFORM_WIDTH / 2.f - 11.f, y - 22.f));
+		} else if (i != 0 && score >= SHIELD_UNLOCK_SCORE && std::rand() % 20 == 0) {
+			platform.attachedPowerUp = std::make_unique<Shield>(
+				sf::Vector2f(x + PLATFORM_WIDTH / 2.f - 13.f, y - 26.f));
 		} 
 
 		platforms.push_back(std::move(platform));
@@ -183,6 +188,9 @@ void PlayState::recyclePlatforms() {
 			} else if (score >= BANANA_UNLOCK_SCORE && std::rand() % 12 == 0) {
 				platform.attachedPowerUp = std::make_unique<Banana>(
 					sf::Vector2f(x + PLATFORM_WIDTH / 2.f - 11.f, highestPlatformY - 22.f));
+			} else if (score >= SHIELD_UNLOCK_SCORE && std::rand() % 20 == 0) {
+				platform.attachedPowerUp = std::make_unique<Shield>( 
+					sf::Vector2f(x + PLATFORM_WIDTH / 2.f - 13.f, highestPlatformY - 26.f));
 			} else { 
 				platform.attachedPowerUp = nullptr;
 			}
@@ -200,30 +208,17 @@ void PlayState::handleCollisions(float previousPlayerBottom) {
 	}
 	
 	sf::FloatRect playerBounds = player.getBounds();
-	float currentBottom = playerBounds.top + playerBounds.height;
 
 	for (const auto& platform : platforms) {
-		sf::FloatRect platformBounds = platform.shape.getGlobalBounds();
-		
-		bool horizontalOverlap = 
-			playerBounds.left + playerBounds.width > platformBounds.left &&
-			playerBounds.left < platformBounds.left + platformBounds.width;
-		
-		//make landing reliable
-		bool crossedTopThisFrame = 
-			previousPlayerBottom <= platformBounds.top &&
-			currentBottom >= platformBounds.top;
-
-		if (horizontalOverlap && crossedTopThisFrame) {
+		if (platform.checklanding(playerBounds, previousPlayerBottom)) {
 			sf::Vector2f pos = player.getPosition();
-			float newCenterY = platformBounds.top - playerBounds.height / 2.f;
+			float newCenterY = platform.getTop() - playerBounds.height / 2.f;
 			player.setPosition(pos.x, newCenterY);
 			player.jump();
-			break;         // only land on one platform per frame 
-		} 
-	} 
+			break;
+		}
+	}
 }
-
 void PlayState::checkPowerUps() {
 	sf::FloatRect playerBounds = player.getBounds();
 	
@@ -466,10 +461,7 @@ void PlayState::render(sf::RenderWindow& window) {
 	window.draw(backgroundSprite);
 
 	for (const auto& platform : platforms) {
-		window.draw(platform.shape);
-		if (platform.attachedPowerUp) {
-			platform.attachedPowerUp->draw(window);
-		}
+		platform.draw(window);
 	}
 
 	for (const auto& obstacle : obstacles) {

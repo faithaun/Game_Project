@@ -63,6 +63,13 @@ void Player::update(float deltaTime, float windowWidth) {
 		pos.x = -WIDTH / 2.f;
 	} 
 	shape.setPosition(pos);
+	
+	if (shieldTimeRemaining > 0.f) {
+		shieldTimeRemaining -= deltaTime;
+		if (shieldTimeRemaining < 0.f) {
+			shieldTimeRemaining = 0.f;
+		}
+	}
 }
 
 //draw
@@ -98,24 +105,13 @@ void Player::reset(float x, float y) {
 	velocity = sf::Vector2f(0.f, 0.f);
 	ammo = 0;
 	bananasCollected = 0;
+	shieldTimeRemaining = 0.f;
 } 
 
 
 //ammo/shooting
-int Player::getAmmo() const {
-	return ammo;
-}
-
 void Player::addAmmo(int amount) {
 	ammo += amount;
-}
-
-void Player::recordBananaCollected() {
-	bananasCollected++;
-}
-
-int Player::getBananaCollected() const {
-	return bananasCollected;
 }
 
 bool Player::hasAmmo() const {
@@ -128,8 +124,31 @@ void Player::useAmmo() {
 	}
 }
 
+int Player::getAmmo() const {
+	return ammo;
+}
+
 bool Player::consumeFirePressed() {
 	bool wasPressed = firePressedThisFrame;
-	firePressedThisFrame = false;  //reset - only true for one frame per press
+	firePressedThisFrame = false;
 	return wasPressed;
 }
+
+
+void Player::recordBananaCollected() {
+	bananasCollected++;
+}
+
+int Player::getBananaCollected() const {
+	return bananasCollected;
+}
+
+void Player::activateShield(float duration) {
+	shieldTimeRemaining = duration;
+}
+
+
+bool Player::isShieldActive() const {
+	return shieldTimeRemaining > 0.f;
+}
+
