@@ -47,6 +47,9 @@ private:
 	float obstacleSpawnTimer;
 	bool cameraFollowingDown;
 	float fallStartBottomY;
+	int nextRockWaveScore = 3000;
+	bool rockWarningActive = false;
+	float rockWarningTimer = 0.f;
 
 	sf::Font font;
 	bool fontLoaded;
@@ -67,6 +70,7 @@ private:
 	void recycleObstacles();
 	void checkObstacles(float previousPlayerBottom);
 	void checkBulletHits();
+	void spawnRockWave();
 
 	void updateCamera();
 	void checkPowerUps();

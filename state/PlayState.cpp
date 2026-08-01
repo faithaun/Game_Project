@@ -4,6 +4,7 @@
 #include "../powerups/Banana.hpp"
 #include "../powerups/Shield.hpp"
 #include "../obstacles/Bird.hpp"
+#include "../obstacles/FallingRock.hpp"
 #include "../platform/MovingBehavior.hpp"
 #include "../platform/BreakingBehavior.hpp"
 #include <cstdlib>
@@ -35,9 +36,11 @@ namespace {
 	
 	//obstacles: 
 	constexpr int OBSTACLE_UNLOCK_SCORE = 1200; //birds start appear after this score
-	constexpr float BIRD_WIDTH = 40.f;
-	constexpr float BIRD_HEIGHT = 30.f;
-
+	constexpr float BIRD_WIDTH = 130.f;
+	constexpr float BIRD_HEIGHT = 130.f;
+	constexpr int ROCK_UNLOCK_SCORE = 3000;
+	constexpr int ROCK_WAVE_INTERVAL = 1500;   //after 3000 every 1500 the rock appear
+	constexpr float ROCK_WARNING_DURATION = 1.2f;   //seconds of warning before rock falls
 
 	float randomSpacing(int currentScore) {
 		float minSpacing = (currentScore >= DIFFICULTY_SCORE) ? HARD_MIN_SPACING : EASY_MIN_SPACING;
@@ -188,7 +191,7 @@ void PlayState::recyclePlatforms() {
 			if (score >= springUnlockScore && springSpawnedSoFar < maxSpringThisGame && 
 				std::rand() % 10 == 0) {
 				platform.attachedPowerUp = std::make_unique<Spring>(
-					sf::Vector2f(x + PLATFORM_WIDTH / 2.f - 10.f, highestPlatformY - 20.f));
+					sf::Vector2f(x + PLATFORM_WIDTH / 2.f - 15.f, highestPlatformY - 15.f));
 			} else if (score >= BANANA_UNLOCK_SCORE && std::rand() % 12 == 0) {
 				platform.attachedPowerUp = std::make_unique<Banana>(
 					sf::Vector2f(x + PLATFORM_WIDTH / 2.f - 11.f, highestPlatformY - 22.f));
@@ -281,7 +284,7 @@ void PlayState::spawnObstacles(float deltaTime) {
 	}
 
 	const int MAX_ATTEMPTS = 30;
-	const float MARGIN = 30.f; //requred clearnace around the bird
+	const float MARGIN = 50.f; //requred clearnace around the bird
 
 	for (int attempt = 0; attempt < MAX_ATTEMPTS; ++attempt) {
 		//pick x anywhere acroos width, guarantee open space
@@ -292,7 +295,14 @@ void PlayState::spawnObstacles(float deltaTime) {
 		sf::FloatRect candidateBounds(x - MARGIN, y - MARGIN, BIRD_WIDTH + MARGIN * 2.f, BIRD_HEIGHT + MARGIN *2.f);
 		bool overlapsAnyPlatform = false;
 		for (const auto& platform : platforms) {
-			if (candidateBounds.intersects(platform.shape.getGlobalBounds())) {
+			sf::FloatRect platBounds = platform.shape.getGlobalBounds();
+		
+			if (dynamic_cast<MovingBehavior*>(platform.behavior.get())) {
+				platBounds.left = 0.f;
+				platBounds.width = WINDOW_WIDTH;
+			}
+
+			if (candidateBounds.intersects(platBounds)) {
 				overlapsAnyPlatform = true;
 				break;
 			}
@@ -307,6 +317,19 @@ void PlayState::spawnObstacles(float deltaTime) {
 	obstacleSpawnTimer = 0.3f;  //no valid spot - try again
 }		
 
+void PlayState::spawnRockWave() {
+	float topOfView = cameraCenterY - WINDOW_HEIGHT / 2.f;
+	int rockCount = 3 + (std::rand() % 2); //randomly 3 of 4 
+
+	for (int i = 0; i < rockCount; ++i) {
+		float x = static_cast<float>(std::rand() % static_cast<int>(WINDOW_WIDTH - 40.f));
+		float y = topOfView - 100.f - static_cast<float>(std::rand() % 500);
+		float speed = 115.f + static_cast<float>(std::rand() % 135);
+
+		obstacles.push_back(std::make_unique<FallingRock>(sf::Vector2f(x, y), speed));
+
+	}
+}
 void PlayState::recycleObstacles() {
 	float visibleBottom = cameraCenterY + WINDOW_HEIGHT / 2.f;
 	// remove obstacles that have scorred below visible area
@@ -332,7 +355,10 @@ void PlayState::checkObstacles(float previousPlayerBottom) {
 			player.getVelocityY() > 0.f && previousPlayerBottom <= obstacleBounds.top && 
 			currentBottom >= obstacleBounds.top;
 		if (landedOnTop) {
-			obstacle->onLandedOnTop(player);
+			if (obstacle->onLandedOnTop(player)) {
+				isFallingFromBirdHit = true;
+				player.setVelocityY(500.f);
+			}
 		} else {
 			if (obstacle->onHitFromBelow(player)) {
 				isFallingFromBirdHit = true;
@@ -350,6 +376,10 @@ void PlayState::checkBulletHits() {
 		} 
 	
 		for (auto it = obstacles.begin(); it != obstacles.end(); ++it) {
+			if (!(*it)->isShootable()) {
+				continue;
+			}
+			
 			if (bullet.getBounds().intersects((*it)->getBounds())) {
 				bullet.deactivate();
 				obstacles.erase(it);
@@ -456,6 +486,20 @@ void PlayState::update(float deltaTime) {
 	}
 	checkObstacles(previousBottom);
 	spawnObstacles(deltaTime);
+	
+	if (score >= nextRockWaveScore && !rockWarningActive) {
+		rockWarningActive = true;
+		rockWarningTimer = ROCK_WARNING_DURATION;
+		nextRockWaveScore += ROCK_WAVE_INTERVAL;
+	}
+	if (rockWarningActive) {
+		rockWarningTimer -= deltaTime;
+		if (rockWarningTimer <= 0.f) {
+			rockWarningActive = false;
+			spawnRockWave();
+		}
+	}
+		
 	recycleObstacles();
 
 
@@ -491,11 +535,23 @@ void PlayState::render(sf::RenderWindow& window) {
 	player.draw(window);
 	
 	window.setView(window.getDefaultView());
+	
+	if (rockWarningActive) {
+		float flashSpeed = 8.f;
+		float pulse = (std::sin(rockWarningTimer * flashSpeed) + 1.f) / 2.f;
+		sf::Uint8 alpha = static_cast<sf::Uint8>(60 + pulse * 100);
+
+		sf::RectangleShape dimOverlay(sf::Vector2f(WINDOW_WIDTH, WINDOW_HEIGHT));
+		dimOverlay.setPosition(0.f, 0.f);
+		dimOverlay.setFillColor(sf::Color(150, 0, 0, alpha));
+		window.draw(dimOverlay); 
+ 	}
 	window.draw(scoreText);
 	window.draw(bananaIconSprite);
 	window.draw(bananaCountText);
 	window.draw(ammoText);
 
+	
 	if (isGameOver) {
 		window.draw(gameOverText);
 		window.draw(restartText);

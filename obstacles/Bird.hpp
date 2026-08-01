@@ -9,7 +9,7 @@ public:
 	explicit Bird(sf::Vector2f position);
 	
 	bool onHitFromBelow(Player& player) override;
-	void onLandedOnTop(Player& player) override;
+	bool  onLandedOnTop(Player& player) override;
 };
 
 #endif //BIRD_HPP

@@ -8,10 +8,15 @@
 // reusable -- it never disappears after use.
 class Spring : public PowerUp {
 public:
-    explicit Spring(sf::Vector2f position);
+	explicit Spring(sf::Vector2f position);
 
-    void apply(Player& player) override;
-    bool consumedOnUse() const override { return false; } // stays after use
+    	void apply(Player& player) override;
+    	bool consumedOnUse() const override { 
+		return false; 
+	} // stays after use
+
+private:
+	static sf::Texture& getTexture();
 };
 
 #endif // SPRING_HPP

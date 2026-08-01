@@ -1,15 +1,27 @@
 #include "Spring.hpp"
 #include "../Player.hpp"
+#include <iostream>
 
 Spring::Spring(sf::Vector2f position) : PowerUp(position) {
-    shape.setSize({20.f, 20.f});
-    shape.setFillColor(sf::Color::Yellow);
-    shape.setOutlineColor(sf::Color(150, 120, 0));
-    shape.setOutlineThickness(2.f);
+	shape.setSize({30.f, 30.f});
+
+	sf::Texture& texture = getTexture();
+	shape.setTexture(&texture);
+    	shape.setFillColor(sf::Color::White);   //white so png real colors, no tint 
 }
 
 void Spring::apply(Player& player) {
-    player.bigJump();
+    	player.bigJump();
 }
 
-
+sf::Texture& Spring::getTexture() {
+	static sf::Texture texture;
+	static bool loaded = false;
+	if (!loaded) {
+		if (!texture.loadFromFile("resources/spring.png")) {
+			std::cerr << "Warning: could not load spring" << std::endl;
+		} 
+		loaded = true;
+	}
+	return texture;
+}
