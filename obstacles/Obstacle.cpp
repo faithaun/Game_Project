@@ -19,6 +19,7 @@ Obstacle::Obstacle(sf::Vector2f position, sf::Vector2f size, sf::Color color, st
 
 void Obstacle::update(float deltaTime) {
 	movementStrategy->move(shape, deltaTime);
+	onUpdate(deltaTime);
 }
 
 sf::FloatRect Obstacle::getBounds() const {

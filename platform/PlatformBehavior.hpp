@@ -14,17 +14,22 @@ public:
 	virtual void update(sf::RectangleShape& shape, float dt) {}
 
     	// Called once, the frame the player lands on top.
-    	virtual void onLanded() {}
+    		virtual void onLanded() {}
 
     	// Whether the platform can currently be landed on / collided with.
-    	virtual bool isSolid() const {
-		 return true; 
+    		virtual bool isSolid() const {
+			return true; 
 	 }	
 
     	//overide this to show own imaqge 
  	virtual const sf::Texture* getTextureOverride() const {
 		return nullptr;    //use normal platform texture
 	}  
+	
+	//behavior is a moving platform, use to keep powerups off of moving platforms
+	virtual bool isMoving() const {
+		return false;
+	}
 };
 
 // Default: plain platform, identical to current behavior.

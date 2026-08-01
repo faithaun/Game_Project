@@ -16,6 +16,8 @@ public:
 	virtual ~Obstacle() = default;
 
 	void update(float deltaTime);	 //delegates to movement strategy
+	virtual void onUpdate(float deltaTime) { 
+	}
 	
 	//player touch obstacle from below 
 	virtual bool onHitFromBelow(Player& player) = 0;

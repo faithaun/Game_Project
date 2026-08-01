@@ -4,7 +4,8 @@ LDFLAGS := -lsfml-graphics -lsfml-window -lsfml-system
 
 TARGET := main
 
-SOURCES :=  main.cpp Game.cpp Player.cpp  state/MainMenuState.cpp state/PlayState.cpp ui/Button.cpp powerups/PowerUp.cpp powerups/Spring.cpp powerups/Banana.cpp powerups/Shield.cpp  obstacles/Obstacle.cpp obstacles/Bird.cpp obstacles/FallingRock.cpp bullet/Bullet.cpp bullet/BulletPool.cpp
+SOURCES :=  main.cpp Game.cpp Player.cpp  state/MainMenuState.cpp state/PlayState.cpp ui/Button.cpp powerups/PowerUp.cpp powerups/Spring.cpp powerups/Banana.cpp powerups/Shield.cpp  obstacles/Obstacle.cpp obstacles/Bird.cpp obstacles/FallingRock.cpp obstacles/Bee.cpp obstacles/BeeNest.cpp bullet/Bullet.cpp bullet/BulletPool.cpp
+
 .PHONY: all run clean
 
 all: $(TARGET)

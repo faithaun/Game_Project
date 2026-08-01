@@ -50,6 +50,7 @@ private:
 	int nextRockWaveScore = 3000;
 	bool rockWarningActive = false;
 	float rockWarningTimer = 0.f;
+	float beeNestSpawnTimer = 0.f;
 
 	sf::Font font;
 	bool fontLoaded;
@@ -71,6 +72,7 @@ private:
 	void checkObstacles(float previousPlayerBottom);
 	void checkBulletHits();
 	void spawnRockWave();
+	void spawnBeeNest(float deltaTime);
 
 	void updateCamera();
 	void checkPowerUps();

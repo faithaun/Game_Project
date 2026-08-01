@@ -27,6 +27,10 @@ public:
 		return &getTexture();
 	}
 
+	bool isMoving() const override {
+		return true;
+	}
+
 private:
 	float minX, maxX;
     	float speed;

@@ -5,6 +5,8 @@
 #include "../powerups/Shield.hpp"
 #include "../obstacles/Bird.hpp"
 #include "../obstacles/FallingRock.hpp"
+#include "../obstacles/BeeNest.hpp"
+#include "../obstacles/Bee.hpp"
 #include "../platform/MovingBehavior.hpp"
 #include "../platform/BreakingBehavior.hpp"
 #include <cstdlib>
@@ -41,6 +43,7 @@ namespace {
 	constexpr int ROCK_UNLOCK_SCORE = 3000;
 	constexpr int ROCK_WAVE_INTERVAL = 1500;   //after 3000 every 1500 the rock appear
 	constexpr float ROCK_WARNING_DURATION = 1.2f;   //seconds of warning before rock falls
+	constexpr int BEE_NEST_UNLOCK_SCORE = 2000; 
 
 	float randomSpacing(int currentScore) {
 		float minSpacing = (currentScore >= DIFFICULTY_SCORE) ? HARD_MIN_SPACING : EASY_MIN_SPACING;
@@ -187,8 +190,23 @@ void PlayState::recyclePlatforms() {
 			float x = static_cast<float>(std::rand() % static_cast<int>(WINDOW_WIDTH - PLATFORM_WIDTH));			
 			platform.shape.setPosition(x, highestPlatformY);
 
-			// re-roll the attached power-up fresha t this paltform new position
-			if (score >= springUnlockScore && springSpawnedSoFar < maxSpringThisGame && 
+			//decide behavior first
+			if (score >= BREAKING_PLATFORM_UNLOCK_SCORE && std::rand() % 10 == 0) {
+				platform.behavior = std::make_unique<BreakingBehavior>();
+			} else if (score >= MOVING_PLATFORM_UNLOCK_SCORE && std::rand() % 8 == 0) {
+				float speed = 80.f + static_cast<float>(std::rand() % 60);
+				float minX = 0.f;
+				float maxX = static_cast<float>(WINDOW_WIDTH);
+				platform.behavior = std::make_unique<MovingBehavior>(minX, maxX, speed);
+			} else {
+				platform.behavior = std::make_unique<NormalBehavior>();
+			}
+
+			// re-roll the attached power-up fresha t this paltform new position 
+			// decide power-up, gated on isMoving()
+			if (platform.behavior->isMoving()) {
+				platform.attachedPowerUp = nullptr;
+			} else if  (score >= springUnlockScore && springSpawnedSoFar < maxSpringThisGame && 
 				std::rand() % 10 == 0) {
 				platform.attachedPowerUp = std::make_unique<Spring>(
 					sf::Vector2f(x + PLATFORM_WIDTH / 2.f - 15.f, highestPlatformY - 15.f));
@@ -202,17 +220,6 @@ void PlayState::recyclePlatforms() {
 				platform.attachedPowerUp = nullptr;
 			}
 			
-			//re-roll platform behavior
-			if (score >= BREAKING_PLATFORM_UNLOCK_SCORE && std::rand() % 10 == 0) {
-				platform.behavior = std::make_unique<BreakingBehavior>();
-			} else if (score >= MOVING_PLATFORM_UNLOCK_SCORE && std::rand() % 8 == 0) {
-				float speed = 80.f + static_cast<float>(std::rand() % 60);
-				float minX = 0.f; 
-				float maxX = static_cast<float>(WINDOW_WIDTH);
-				platform.behavior = std::make_unique<MovingBehavior>(minX, maxX, speed);
-			} else {
-				platform.behavior = std::make_unique<NormalBehavior>();
-			}
 		}
 	} 
 }
@@ -306,7 +313,17 @@ void PlayState::spawnObstacles(float deltaTime) {
 				overlapsAnyPlatform = true;
 				break;
 			}
+		} 
+
+		//new changes, check if nest overlap with the bird
+		bool overlapsAnyObstacle = false;
+		for (const auto& existingObstacle : obstacles) {
+			if (candidateBounds.intersects(existingObstacle->getBounds())) {
+				overlapsAnyObstacle = true;
+				break;
+			}
 		}
+
 		if (!overlapsAnyPlatform) {
 			obstacles.push_back(std::make_unique<Bird>(sf::Vector2f(x, y)));
 			birdsSpawnedThisBlock++;
@@ -315,7 +332,74 @@ void PlayState::spawnObstacles(float deltaTime) {
 		}
 	}
 	obstacleSpawnTimer = 0.3f;  //no valid spot - try again
-}		
+}	
+
+void PlayState::spawnBeeNest(float deltaTime) {
+	beeNestSpawnTimer -= deltaTime;
+
+	if (score < BEE_NEST_UNLOCK_SCORE || beeNestSpawnTimer > 0.f) {
+		return;
+	}
+
+	float topOfView = cameraCenterY - WINDOW_HEIGHT / 2.f;
+	float upperBound = topOfView - 100.f;
+	float lowerBound = player.getPosition().y - 150.f;
+	
+	if (lowerBound <= upperBound) {
+		beeNestSpawnTimer = 0.3f;
+		return;
+	} 
+
+	const int MAX_ATTEMPTS = 30;
+	const float MARGIN = 50.f;
+	const float NEST_WIDTH = 45.f;
+	const float NEST_HEIGHT = 45.f;
+	
+	for (int attempt = 0; attempt < MAX_ATTEMPTS; ++attempt) {
+		float x;
+		bool spawnOnLeft = (std::rand() % 2 == 0);	
+		float edgeMargin = 20.f;
+		float edgeVariance = 15.f;   // small random wiggle
+
+		if (spawnOnLeft) {
+			x = edgeMargin + static_cast<float>(std::rand() % static_cast<int>(edgeVariance));
+		} else {
+			x = WINDOW_WIDTH - NEST_WIDTH - edgeMargin - static_cast<float>(std::rand() % static_cast<int>(edgeVariance));
+		} 
+		
+		float y = upperBound + static_cast<float>(std::rand() % static_cast<int>(lowerBound - upperBound));
+
+		sf::FloatRect candidateBounds(x - MARGIN, y - MARGIN, NEST_WIDTH + MARGIN * 2.f, NEST_HEIGHT + MARGIN * 2.f);
+		bool overlapsAnyPlatform = false;
+		for (const auto& platform : platforms) {	
+			sf::FloatRect platBounds = platform.shape.getGlobalBounds();
+		
+			if (dynamic_cast<MovingBehavior*>(platform.behavior.get())) {
+				platBounds.left = 0.f;
+				platBounds.width = WINDOW_WIDTH;
+			}
+
+			if (candidateBounds.intersects(platBounds)) {
+				overlapsAnyPlatform = true;
+				break;
+			}
+		}
+		bool overlapsAnyObstacle = false;
+		for (const auto& existingObstacle : obstacles) {
+			if (candidateBounds.intersects(existingObstacle->getBounds())) {
+				overlapsAnyObstacle = true;
+				break;
+			}
+		}
+	
+		if (!overlapsAnyPlatform && !overlapsAnyObstacle) {
+			obstacles.push_back(std::make_unique<BeeNest>(sf::Vector2f(x,y)));
+			beeNestSpawnTimer = 15.f + static_cast<float>(std::rand() % 10);
+			return;
+		}
+	}
+	beeNestSpawnTimer = 0.3f;
+}
 
 void PlayState::spawnRockWave() {
 	float topOfView = cameraCenterY - WINDOW_HEIGHT / 2.f;
@@ -469,6 +553,7 @@ void PlayState::update(float deltaTime) {
 	for (auto& platform : platforms) {
 		platform.update(deltaTime);
 	}	
+
 	handleCollisions(previousBottom);
 	checkPowerUps();
 	recyclePlatforms();
@@ -484,8 +569,46 @@ void PlayState::update(float deltaTime) {
 	for (auto& obstacle : obstacles) {
 		obstacle->update(deltaTime); //delegates each obstacle own movement strategy
 	}
-	checkObstacles(previousBottom);
+
+	//release any nest thats ready to spawn its swarm
+	std::vector<std::pair<sf::Vector2f, BeeNest*>> nestsToRelease;
+	for (auto& obstacle : obstacles) {
+		if (auto* nest = dynamic_cast<BeeNest*>(obstacle.get())) {
+			if (nest->isReadyToSpawn()) {
+				sf::FloatRect bounds = nest->getBounds();
+				nestsToRelease.push_back({sf::Vector2f(bounds.left, bounds.top), nest});
+			}
+		} 
+	}
+
+	for (auto& pair : nestsToRelease) {
+		sf::Vector2f nestPos = pair.first;
+		BeeNest* nest = pair.second;
+		int count = nest->getBeeCount();
+
+		bool nestOnLeft = nestPos.x < WINDOW_WIDTH / 2.f;
+
+		for (int i = 0; i < count; ++i) {
+			float angleDegrees;
+			if (nestOnLeft) {
+				angleDegrees = -60.f + static_cast<float>(std::rand() % 120);
+			} else {
+				angleDegrees = 120 + static_cast<float>(std::rand() % 120);
+			}
+			float angle = angleDegrees * 3.14159f / 180.f;
+			float speed = 45.f + static_cast<float>(std::rand() % 55);  //bees pace
+
+			float offsetX = static_cast<float>(std::rand() % 30) - 15.f;
+			float offsetY = static_cast<float>(std::rand() % 30) - 15.f;
+			sf::Vector2f beePos(nestPos.x + offsetX, nestPos.y + offsetY);
+
+			obstacles.push_back(std::make_unique<Bee>(nestPos, angle, speed));
+		}
+		nest->markSpawned();
+	}
+	checkObstacles(deltaTime);
 	spawnObstacles(deltaTime);
+	spawnBeeNest(deltaTime);
 	
 	if (score >= nextRockWaveScore && !rockWarningActive) {
 		rockWarningActive = true;
