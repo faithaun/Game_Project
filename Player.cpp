@@ -23,10 +23,30 @@ Player::Player(float startX, float startY) : velocity(0.f, 0.f) {
 	sf::Vector2u texSize = texture.getSize();
 	if (texSize.x > 0 && texSize.y > 0) {
 		float visualScale = 1.5f; // 50% bigger
-		sprite.setScale(visualScale * WIDTH / texSize.x, visualScale * HEIGHT / texSize.y);
+		baseScaleX = visualScale * WIDTH / texSize.x;
+		baseScaleY = visualScale * HEIGHT / texSize.y;
 	}
+	sprite.setScale(baseScaleX, baseScaleY);
 	sprite.setOrigin(texSize.x / 2.f, texSize.y / 2.f);
 	sprite.setPosition(startX, startY);
+
+	//shield bubble
+	if (!bubbleTexture.loadFromFile("resources/bubble.png")) {
+		std::cerr << "Warning: could not load bubble" << std::endl;
+	}
+	bubbleSprite.setTexture(bubbleTexture);
+	sf::Vector2u bubbleTexSize = bubbleTexture.getSize();
+	if (bubbleTexSize.x > 0 && bubbleTexSize.y > 0) {
+		float monkeyRenderedWidth = std::abs(baseScaleX) * texSize.x;
+		float monkeyRenderedHeight  = baseScaleY * texSize.y;
+		constexpr float BUBBLE_MARGIN = 1.5f;  //bigger than monkey
+		float bubbleScaleX = (monkeyRenderedWidth * BUBBLE_MARGIN) / bubbleTexSize.x;
+		float bubbleScaleY = (monkeyRenderedHeight * BUBBLE_MARGIN) / bubbleTexSize.y;
+		bubbleSprite.setScale(bubbleScaleX, bubbleScaleY);
+	}
+	bubbleSprite.setOrigin(bubbleTexSize.x / 2.f, bubbleTexSize.y / 2.f);
+	bubbleSprite.setPosition(startX, startY);
+	bubbleSprite.setColor(sf::Color(255, 255, 255, 110));  //translucent
 }
 
 //handle input: reads keuboard state, sets horizontal velocty
@@ -35,9 +55,11 @@ void Player::handleInput() {
 	
 	if (sf::Keyboard::isKeyPressed(sf::Keyboard::Left) || sf::Keyboard::isKeyPressed(sf::Keyboard::A)) { 
 		velocity.x = -MOVE_SPEED;
+		facingRight = false;
 	}
 	if (sf::Keyboard::isKeyPressed(sf::Keyboard::Right) || sf::Keyboard::isKeyPressed(sf::Keyboard::D)) {
 		velocity.x = MOVE_SPEED;
+		facingRight = true;
 	}
 	
 	//edge-detect space - only counts as press the frame it goes from up to down
@@ -76,6 +98,8 @@ void Player::update(float deltaTime, float windowWidth) {
 	} 
 	shape.setPosition(pos);
 	sprite.setPosition(pos);
+	sprite.setScale(facingRight ? baseScaleX : -baseScaleX, baseScaleY);
+	bubbleSprite.setPosition(pos);
 
 	if (shieldTimeRemaining > 0.f) {
 		shieldTimeRemaining -= deltaTime;
@@ -87,6 +111,10 @@ void Player::update(float deltaTime, float windowWidth) {
 
 //draw
 void Player::draw(sf::RenderWindow& window) const {	
+	window.draw(sprite);	
+	if (isShieldActive()) {
+		window.draw(bubbleSprite);
+	}
 	window.draw(sprite);
 } 
 
@@ -108,6 +136,7 @@ float Player::getVelocityY() const {
 void Player::setPosition(float x, float y) {
 	shape.setPosition(x, y);
 	sprite.setPosition(x, y);
+	bubbleSprite.setPosition(x, y);
 }
 
 void Player::setVelocityY(float vy) {

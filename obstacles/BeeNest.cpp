@@ -2,7 +2,7 @@
 #include "StaticMovement.hpp"
 #include "../Player.hpp"
 
-BeeNest::BeeNest(sf::Vector2f position) : Obstacle(position, sf::Vector2f(75.f, 75.f), sf::Color(200, 150, 60),
+BeeNest::BeeNest(sf::Vector2f position) : Obstacle(position, sf::Vector2f(100.f, 100.f), sf::Color(200, 150, 60),
 	std::make_unique<StaticMovement>(), "resources/bee_nest.png") {
 }
 
@@ -16,6 +16,7 @@ bool BeeNest::onLandedOnTop(Player& player) {
 
 void BeeNest::onUpdate(float deltaTime) {
 	if (readyToSpawn) return;
+	if (!playerIsNear) return;  //dont start immedieantly
 	spawnTimer -= deltaTime;
 	if (spawnTimer <= 0.f) {
 		readyToSpawn = true;

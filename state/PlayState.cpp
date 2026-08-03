@@ -44,6 +44,7 @@ namespace {
 	constexpr int ROCK_WAVE_INTERVAL = 1500;   //after 3000 every 1500 the rock appear
 	constexpr float ROCK_WARNING_DURATION = 1.2f;   //seconds of warning before rock falls
 	constexpr int BEE_NEST_UNLOCK_SCORE = 2000; 
+	constexpr float BEE_NEST_TRIGGER_DISTANCE = 400.f; //nest countdown
 
 	float randomSpacing(int currentScore) {
 		float minSpacing = (currentScore >= DIFFICULTY_SCORE) ? HARD_MIN_SPACING : EASY_MIN_SPACING;
@@ -567,6 +568,12 @@ void PlayState::update(float deltaTime) {
 	checkBulletHits();
 
 	for (auto& obstacle : obstacles) {
+		if (auto* nest = dynamic_cast<BeeNest*>(obstacle.get())) {
+			sf::FloatRect bounds = nest->getBounds();		
+			float nestCenterY = bounds.top + bounds.height / 2.f;
+			float verticalDistance = std::abs(nestCenterY - player.getPosition().y);
+			nest->setPlayerNear(verticalDistance <= BEE_NEST_TRIGGER_DISTANCE);
+		}
 		obstacle->update(deltaTime); //delegates each obstacle own movement strategy
 	}
 

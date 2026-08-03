@@ -22,12 +22,20 @@ public:
 	}
 	int getBeeCount() const {
 		return beeCount; 
+	} 
+
+	//PlayState class this every fame 
+	void setPlayerNear(bool near) {
+		if (near) { 
+		playerIsNear = near;
+		}
 	}
 
 private:
-	float spawnTimer = 1.5f;  //seconds before bee release
+	float spawnTimer = 0.5f;  //seconds before bee release
 	bool readyToSpawn = false;
 	bool alreadySpawned = false;
+	bool playerIsNear = false;
 	int beeCount = 6 + (std::rand() % 3); //6, 7, 8
 };
 

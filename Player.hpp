@@ -57,8 +57,14 @@ private:
 	sf::RectangleShape shape;  //represent the player
 	sf::Texture texture;
 	sf::Sprite sprite;
+	sf::Texture bubbleTexture; //shield indicator 
+	sf::Sprite bubbleSprite;
 	sf::Vector2f velocity;        //current velocity
 	
+	bool facingRight = true;  //which way th monkey sprite is currently flipped
+	float baseScaleX = 1.f; 
+	float baseScaleY = 1.f; 
+
 	int ammo = 0; 
 	int bananasCollected = 0;
 	bool spaceWasDown = false;
