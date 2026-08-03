@@ -36,6 +36,13 @@ namespace {
 	constexpr int BREAKING_PLATFORM_UNLOCK_SCORE = 600;
 	constexpr float GAME_OVER_MARGIN = 700.f;   //how far the camera follows the fall before freezing
 	
+	//background
+	constexpr float DARK_TILE_COUNT = 8.f;  //how many "pages" of dark tile
+	constexpr int TINT_MAX_COUNT = 8000;   //score at which tint switch in light
+	constexpr sf::Uint8 TINT_MAX_ALPHA = 140; //max opacity of tint overlay
+	const sf::Color TINT_COLOR_LOW(20, 40, 10);
+	const sf::Color TINT_COLOR_HIGH(255, 255, 255);
+
 	//obstacles: 
 	constexpr int OBSTACLE_UNLOCK_SCORE = 1200; //birds start appear after this score
 	constexpr float BIRD_WIDTH = 130.f;
@@ -45,6 +52,9 @@ namespace {
 	constexpr float ROCK_WARNING_DURATION = 1.2f;   //seconds of warning before rock falls
 	constexpr int BEE_NEST_UNLOCK_SCORE = 2000; 
 	constexpr float BEE_NEST_TRIGGER_DISTANCE = 400.f; //nest countdown
+
+	constexpr int TINT_MAX_SCORE = 6000; 
+	constexpr sf::Uint8 FOG_MAX_ALPHA = 160;   
 
 	float randomSpacing(int currentScore) {
 		float minSpacing = (currentScore >= DIFFICULTY_SCORE) ? HARD_MIN_SPACING : EASY_MIN_SPACING;
@@ -91,8 +101,28 @@ PlayState::PlayState(Game& game) : game(game),
 	sf::Vector2u texSize = backgroundTexture.getSize();
 	if (texSize.x > 0 && texSize.y > 0) {
 		backgroundSprite.setScale(WINDOW_WIDTH / texSize.x, WINDOW_HEIGHT / texSize.y); 
-	} 
+	}
+		//dark tile
+	if (!darkTileTexture.loadFromFile("resources/dark_jungle_tile.png")) {
+		std::cerr << "Warning could not load dark jungle tile" << std::endl;
+	}
+	darkTileSprite.setTexture(darkTileTexture);
+	sf::Vector2u darkSize = darkTileTexture.getSize();
+	if (darkSize.x > 0 && darkSize.y > 0) {
+		darkTileSprite.setScale(WINDOW_WIDTH / darkSize.x, WINDOW_HEIGHT / darkSize.y);
+	}
 
+		//ground floor: with the bottom 
+	if (!groundTexture.loadFromFile("resources/ground_background.png")) {
+		std::cerr << "Warning could not load ground background" << std::endl;
+	}
+	groundSprite.setTexture(groundTexture);
+	sf::Vector2u groundSize = groundTexture.getSize();
+	if (groundSize.x > 0 && groundSize.y > 0) {
+		groundSprite.setScale(WINDOW_WIDTH / groundSize.x, WINDOW_HEIGHT / groundSize.y);
+	}
+	groundSprite.setPosition(0.f, 0.f);
+	
 	scoreText.setFont(font);
 	scoreText.setCharacterSize(24);
 	scoreText.setFillColor(sf::Color::Black);
@@ -646,13 +676,25 @@ void PlayState::render(sf::RenderWindow& window) {
 	window.setView(gameView);
 	window.clear();
 
+	window.draw(groundSprite);
+
 	float topOfView = cameraCenterY - WINDOW_HEIGHT / 2.f;
 	float tileIndex = std::floor(topOfView / WINDOW_HEIGHT);
 	float tileY = tileIndex * WINDOW_HEIGHT;	
-	backgroundSprite.setPosition(0.f, tileY);
-	window.draw(backgroundSprite);
-	backgroundSprite.setPosition(0.f, tileY + WINDOW_HEIGHT);
-	window.draw(backgroundSprite);
+
+	auto drawTile = [&](float index, float y) {
+		if (index == 0.f) return;  //skip ground floor
+		if (index > -DARK_TILE_COUNT) {
+			darkTileSprite.setPosition(0.f, y);
+			window.draw(darkTileSprite);
+		} else {
+			backgroundSprite.setPosition(0.f, y);
+			window.draw(backgroundSprite);
+		}
+	};
+		
+	drawTile(tileIndex, tileY);
+	drawTile(tileIndex + 1.f, tileY + WINDOW_HEIGHT);
 
 	for (const auto& platform : platforms) {
 		platform.draw(window);
@@ -665,6 +707,18 @@ void PlayState::render(sf::RenderWindow& window) {
 	player.draw(window);
 	
 	window.setView(window.getDefaultView());
+	
+	float tintProgress = std::min(1.f, static_cast<float>(score) / static_cast<float>(TINT_MAX_SCORE));
+	
+	sf::Uint8 tintR = static_cast<sf::Uint8>(TINT_COLOR_LOW.r + (TINT_COLOR_HIGH.r - TINT_COLOR_LOW.r) * tintProgress);
+	sf::Uint8 tintG = static_cast<sf::Uint8>(TINT_COLOR_LOW.g + (TINT_COLOR_HIGH.g - TINT_COLOR_LOW.g) * tintProgress);
+	sf::Uint8 tintB = static_cast<sf::Uint8>(TINT_COLOR_LOW.b + (TINT_COLOR_HIGH.b - TINT_COLOR_LOW.b) * tintProgress);
+	sf::Uint8 tintAlpha  = static_cast<sf::Uint8>(tintProgress * TINT_MAX_ALPHA);
+	
+	sf::RectangleShape tintOverlay(sf::Vector2f(WINDOW_WIDTH, WINDOW_HEIGHT));
+	tintOverlay.setPosition(0.f, 0.f);
+	tintOverlay.setFillColor(sf::Color(tintR, tintG, tintB, tintAlpha));
+	window.draw(tintOverlay);
 	
 	if (rockWarningActive) {
 		float flashSpeed = 8.f;

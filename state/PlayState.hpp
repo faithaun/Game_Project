@@ -32,6 +32,11 @@ private:
 
 	sf::Texture backgroundTexture;
 	sf::Sprite backgroundSprite;
+	sf::Texture darkTileTexture;
+	sf::Sprite darkTileSprite;
+	sf::Texture groundTexture;
+	sf::Sprite groundSprite;
+
 	sf::View gameView;  //scrolling camera
 	float cameraCenterY;  // current vertical center of camera
 	float bestHeightY;    //highest Y the player has ever reach for score
