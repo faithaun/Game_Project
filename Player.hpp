@@ -19,6 +19,8 @@ public:
 	void jump();
 	void bigJump();
 
+	void showHurt();
+
 	//integrate velocity into position and wrps areound screen edges
 	void update(float deltaTime, float windowWidth);
 
@@ -34,6 +36,7 @@ public:
 	void setPosition(float x, float y);
 	void setVelocityY(float vy);
 	void reset(float x, float y);  //full reset, position and zero velocity
+	void restoreIdleSprite();
 
 
 	//ammo /shooting
@@ -59,6 +62,7 @@ private:
 	sf::Sprite sprite;
 	sf::Texture bubbleTexture; //shield indicator 
 	sf::Sprite bubbleSprite;
+	sf::Texture hurtTexture;  //show once the game end
 	sf::Vector2f velocity;        //current velocity
 	
 	bool facingRight = true;  //which way th monkey sprite is currently flipped

@@ -25,9 +25,13 @@ public:
 	//player fell and landed cleanly top of obstacle
 	virtual bool onLandedOnTop(Player& player) = 0;
 	
-	//whether this obstacle can be destroyed by players bullet
+	//whether this obstcle can be destroyed by bullet
 	virtual bool isShootable() const {
 		return true;
+	}
+	//bounces
+	virtual bool bouncesBullets() const {
+		return false;
 	}
 
 	sf::FloatRect getBounds() const;

@@ -34,14 +34,7 @@ namespace {
 	constexpr int SHIELD_UNLOCK_SCORE = 400;
 	constexpr int MOVING_PLATFORM_UNLOCK_SCORE = 400;
 	constexpr int BREAKING_PLATFORM_UNLOCK_SCORE = 600;
-	constexpr float GAME_OVER_MARGIN = 700.f;   //how far the camera follows the fall before freezing
-	
-	//background
-	constexpr float DARK_TILE_COUNT = 8.f;  //how many "pages" of dark tile
-	constexpr int TINT_MAX_COUNT = 8000;   //score at which tint switch in light
-	constexpr sf::Uint8 TINT_MAX_ALPHA = 140; //max opacity of tint overlay
-	const sf::Color TINT_COLOR_LOW(20, 40, 10);
-	const sf::Color TINT_COLOR_HIGH(255, 255, 255);
+	constexpr float GAME_OVER_MARGIN = 700.f;   //how far the camera follows the fall before freezin
 
 	//obstacles: 
 	constexpr int OBSTACLE_UNLOCK_SCORE = 1200; //birds start appear after this score
@@ -52,9 +45,6 @@ namespace {
 	constexpr float ROCK_WARNING_DURATION = 1.2f;   //seconds of warning before rock falls
 	constexpr int BEE_NEST_UNLOCK_SCORE = 2000; 
 	constexpr float BEE_NEST_TRIGGER_DISTANCE = 400.f; //nest countdown
-
-	constexpr int TINT_MAX_SCORE = 6000; 
-	constexpr sf::Uint8 FOG_MAX_ALPHA = 160;   
 
 	float randomSpacing(int currentScore) {
 		float minSpacing = (currentScore >= DIFFICULTY_SCORE) ? HARD_MIN_SPACING : EASY_MIN_SPACING;
@@ -101,15 +91,6 @@ PlayState::PlayState(Game& game) : game(game),
 	sf::Vector2u texSize = backgroundTexture.getSize();
 	if (texSize.x > 0 && texSize.y > 0) {
 		backgroundSprite.setScale(WINDOW_WIDTH / texSize.x, WINDOW_HEIGHT / texSize.y); 
-	}
-		//dark tile
-	if (!darkTileTexture.loadFromFile("resources/dark_jungle_tile.png")) {
-		std::cerr << "Warning could not load dark jungle tile" << std::endl;
-	}
-	darkTileSprite.setTexture(darkTileTexture);
-	sf::Vector2u darkSize = darkTileTexture.getSize();
-	if (darkSize.x > 0 && darkSize.y > 0) {
-		darkTileSprite.setScale(WINDOW_WIDTH / darkSize.x, WINDOW_HEIGHT / darkSize.y);
 	}
 
 		//ground floor: with the bottom 
@@ -355,7 +336,7 @@ void PlayState::spawnObstacles(float deltaTime) {
 			}
 		}
 
-		if (!overlapsAnyPlatform) {
+		if (!overlapsAnyPlatform && !overlapsAnyObstacle) {
 			obstacles.push_back(std::make_unique<Bird>(sf::Vector2f(x, y)));
 			birdsSpawnedThisBlock++;
 			obstacleSpawnTimer = 10.f + static_cast<float>(std::rand() % 8);
@@ -492,6 +473,10 @@ void PlayState::checkBulletHits() {
 	
 		for (auto it = obstacles.begin(); it != obstacles.end(); ++it) {
 			if (!(*it)->isShootable()) {
+				if ((*it)->bouncesBullets() && bullet.getBounds().intersects((*it)->getBounds())) {
+					bullet.bounce();
+					break;    //bullet bounce, obstacle intact
+				}
 				continue;
 			}
 			
@@ -571,7 +556,6 @@ void PlayState::handleEvent(const sf::Event& event) {
 
 void PlayState::update(float deltaTime) {
 	if (isGameOver) {        //game over show -- freeze camera, let plater fall under gavity
-		player.update(deltaTime, WINDOW_WIDTH);
 		return;      // freeze gameplay until player restarts
 	}
 
@@ -586,7 +570,9 @@ void PlayState::update(float deltaTime) {
 	}	
 
 	handleCollisions(previousBottom);
-	checkPowerUps();
+	if (!isFallingFromBirdHit) {
+		checkPowerUps();
+	}
 	recyclePlatforms();
 
 	//fire bullet on fresh space press, if player has ammo
@@ -669,6 +655,9 @@ void PlayState::update(float deltaTime) {
 	//game over: player fallen below what camera can see
 	if (cameraFollowingDown && player.getPosition().y > fallStartBottomY + GAME_OVER_MARGIN) {
 		isGameOver = true;
+		player.showHurt();
+		float bottomOfScreenY = cameraCenterY + WINDOW_HEIGHT / 2.f - 30.f;
+		player.setPosition(player.getPosition().x, bottomOfScreenY);
 	}
 }
 
@@ -684,13 +673,8 @@ void PlayState::render(sf::RenderWindow& window) {
 
 	auto drawTile = [&](float index, float y) {
 		if (index == 0.f) return;  //skip ground floor
-		if (index > -DARK_TILE_COUNT) {
-			darkTileSprite.setPosition(0.f, y);
-			window.draw(darkTileSprite);
-		} else {
-			backgroundSprite.setPosition(0.f, y);
-			window.draw(backgroundSprite);
-		}
+		backgroundSprite.setPosition(0.f, y);
+		window.draw(backgroundSprite);
 	};
 		
 	drawTile(tileIndex, tileY);
@@ -707,18 +691,6 @@ void PlayState::render(sf::RenderWindow& window) {
 	player.draw(window);
 	
 	window.setView(window.getDefaultView());
-	
-	float tintProgress = std::min(1.f, static_cast<float>(score) / static_cast<float>(TINT_MAX_SCORE));
-	
-	sf::Uint8 tintR = static_cast<sf::Uint8>(TINT_COLOR_LOW.r + (TINT_COLOR_HIGH.r - TINT_COLOR_LOW.r) * tintProgress);
-	sf::Uint8 tintG = static_cast<sf::Uint8>(TINT_COLOR_LOW.g + (TINT_COLOR_HIGH.g - TINT_COLOR_LOW.g) * tintProgress);
-	sf::Uint8 tintB = static_cast<sf::Uint8>(TINT_COLOR_LOW.b + (TINT_COLOR_HIGH.b - TINT_COLOR_LOW.b) * tintProgress);
-	sf::Uint8 tintAlpha  = static_cast<sf::Uint8>(tintProgress * TINT_MAX_ALPHA);
-	
-	sf::RectangleShape tintOverlay(sf::Vector2f(WINDOW_WIDTH, WINDOW_HEIGHT));
-	tintOverlay.setPosition(0.f, 0.f);
-	tintOverlay.setFillColor(sf::Color(tintR, tintG, tintB, tintAlpha));
-	window.draw(tintOverlay);
 	
 	if (rockWarningActive) {
 		float flashSpeed = 8.f;

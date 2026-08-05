@@ -8,14 +8,19 @@ Bullet::Bullet() {
 void Bullet::activate(sf::Vector2f position) {
 	shape.setPosition(position);
 	active = true;
+	movingDown = false;  
 }
 
 void Bullet::update(float deltaTime) {
 	if (!active) {
 		return;
 	} 
-	shape.move(0.f, -SPEED * deltaTime);
-		//negative Y = upward
+	shape.move(0.f, movingDown ? SPEED * deltaTime : -SPEED * deltaTime);
+		//negative Y = upward, Y = downward
+}
+
+void Bullet::bounce() {
+	movingDown = true;
 }
 
 void Bullet::deactivate() {

@@ -11,6 +11,15 @@ public:
 	bool onHitFromBelow(Player& player) override;
 	bool onLandedOnTop(Player& player) override;
 
+	// beenest cant be shot by ammo 
+	bool isShootable() const override { 
+		return false;
+	}
+	bool bouncesBullets() const override {
+		return true;
+	}
+
+
 	void onUpdate(float deltaTime) override;
 	
 	//playstate check this each frame to know when to spawn bees and remove the nest

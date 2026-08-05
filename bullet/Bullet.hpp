@@ -11,6 +11,7 @@ public:
 	void activate(sf::Vector2f position);
 	void update(float deltaTime);
 	void deactivate();
+	void bounce();  //reverses direction, after hitting something 
 
 	bool isActive() const;
 	sf::FloatRect getBounds() const;
@@ -19,6 +20,7 @@ public:
 private:
 	sf::RectangleShape shape;
 	bool active = false;
+	bool movingDown = false; //true after a bounce
 
 	static constexpr float SPEED = 500.f;  //pixels per second, moving upward
 };

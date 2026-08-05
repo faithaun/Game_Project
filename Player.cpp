@@ -1,5 +1,6 @@
 #include "Player.hpp"
 #include <iostream>
+#include <algorithm>
 
 //definition of tunable constants
 const float Player::WIDTH = 40.f;
@@ -47,6 +48,10 @@ Player::Player(float startX, float startY) : velocity(0.f, 0.f) {
 	bubbleSprite.setOrigin(bubbleTexSize.x / 2.f, bubbleTexSize.y / 2.f);
 	bubbleSprite.setPosition(startX, startY);
 	bubbleSprite.setColor(sf::Color(255, 255, 255, 110));  //translucent
+
+	if (!hurtTexture.loadFromFile("resources/hurt_monkey.png")) {
+		std::cerr << "Warning cound not load hurt monkey" << std::endl;
+	}
 }
 
 //handle input: reads keuboard state, sets horizontal velocty
@@ -82,6 +87,18 @@ void Player::jump() {
 
 void Player::bigJump() {
 	velocity.y = BIG_JUMP_VELOCITY;
+}
+
+void Player::showHurt() {
+	velocity = sf::Vector2f(0.f, 0.f);
+	sprite.setTexture(hurtTexture);
+	sf::Vector2u hurtSize = hurtTexture.getSize();
+	if (hurtSize.x > 0 && hurtSize.y > 0) {
+		float visualScale = 2.5f; 
+		float scale = visualScale * std::min(WIDTH / (float)hurtSize.x, HEIGHT / (float)hurtSize.y);
+		sprite.setScale(facingRight ? scale : -scale, scale);
+		sprite.setOrigin(hurtSize.x / 2.f, hurtSize.y / 2.f);
+	}
 }
 
 //update: applies gravity, integrate velocity into position, and wraps player left/right screen edges
@@ -150,6 +167,17 @@ void Player::reset(float x, float y) {
 	ammo = 0;
 	bananasCollected = 0;
 	shieldTimeRemaining = 0.f;
+	restoreIdleSprite();
+}
+
+void Player::restoreIdleSprite() {
+	sprite.setTexture(texture);
+	sf::Vector2u texSize = texture.getSize();
+	if (texSize.x > 0 && texSize.y > 0) {
+		sprite.setScale(facingRight ? baseScaleX : -baseScaleX, baseScaleY);
+		sprite.setOrigin(texSize.x / 2.f, texSize.y / 2.f);
+	}
+
 } 
 
 

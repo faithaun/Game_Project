@@ -32,8 +32,6 @@ private:
 
 	sf::Texture backgroundTexture;
 	sf::Sprite backgroundSprite;
-	sf::Texture darkTileTexture;
-	sf::Sprite darkTileSprite;
 	sf::Texture groundTexture;
 	sf::Sprite groundSprite;
 
