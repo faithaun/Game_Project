@@ -20,11 +20,15 @@ private:
 	sf::Font font;
 	sf::Texture backgroundTexture;
 	sf::Sprite backgroundSprite;
-	sf::Text titleLine1;
-	sf::Text titleLine2;
+	sf::Texture mascotTexture;
+	sf::Sprite mascotSprite;
+	sf::Texture titleTexture;
+	sf::Sprite titleSprite;
 	std::vector<Button> buttons;
 
 	void setupBackground();
 	void setupTitle();
 	void setupButtons();
+	void setupMascot();
+
 };

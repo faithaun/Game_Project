@@ -134,15 +134,23 @@ PlayState::PlayState(Game& game) : game(game),
 	gameOverText.setString("Game Over");
 	sf::FloatRect goBounds = gameOverText.getLocalBounds();
 	gameOverText.setOrigin(goBounds.left + goBounds.width / 2.f, goBounds.top + goBounds.height / 2.f);
-	gameOverText.setPosition(WINDOW_WIDTH / 2.f, WINDOW_HEIGHT / 2.f - 30.f);
+	gameOverText.setPosition(WINDOW_WIDTH / 2.f, WINDOW_HEIGHT / 2.f - 120.f);
 
-	restartText.setFont(font);
-	restartText.setCharacterSize(20);
-	restartText.setFillColor(sf::Color::Black);
-	restartText.setString("Press R to Restart");
-	sf::FloatRect rBounds = restartText.getLocalBounds();
-	restartText.setOrigin(rBounds.left + rBounds.width / 2.f, rBounds.top + rBounds.height / 2.f);
-	restartText.setPosition(WINDOW_WIDTH / 2.f, WINDOW_HEIGHT / 2.f + 30.f);
+	sf::Vector2f gameOverButtonSize(260.f, 75.f);
+	float gameOverButtonX = (WINDOW_WIDTH - gameOverButtonSize.x) / 2.f;
+	gameOverButtons.reserve(2);
+
+	gameOverButtons.emplace_back(font, "Play", sf::Vector2f(gameOverButtonX, WINDOW_HEIGHT / 2.f - 40.f),
+		gameOverButtonSize, "resources/button_play.png"); 
+	gameOverButtons.back().setOnClick([this]() {
+		restartGame();
+	});
+
+	gameOverButtons.emplace_back(font, "Exit", sf::Vector2f(gameOverButtonX, WINDOW_HEIGHT / 2.f + 45.f), 
+		gameOverButtonSize, "resources/button_exit.png");
+	gameOverButtons.back().setOnClick([this]() {
+		this->game.requestQuit();
+	});
 	
 	
 	gameView.setSize(WINDOW_WIDTH, WINDOW_HEIGHT);	
@@ -304,7 +312,8 @@ void PlayState::spawnObstacles(float deltaTime) {
 
 	const int MAX_ATTEMPTS = 30;
 	const float MARGIN = 50.f; //requred clearnace around the bird
-
+	const float CLEARED_SPOT_RADIUS = 220.f;
+	
 	for (int attempt = 0; attempt < MAX_ATTEMPTS; ++attempt) {
 		//pick x anywhere acroos width, guarantee open space
 		float x = 30.f + static_cast<float>(std::rand() % static_cast<int>(WINDOW_WIDTH - BIRD_WIDTH - 60.f));
@@ -334,9 +343,17 @@ void PlayState::spawnObstacles(float deltaTime) {
 				overlapsAnyObstacle = true;
 				break;
 			}
+		} 
+	
+		bool tooCloseToRecentlyCleared = false;
+		for (const auto& spot : recentlyClearedSpots) {
+			if (std::abs(spot.first - y) < CLEARED_SPOT_RADIUS) {
+				tooCloseToRecentlyCleared = true;
+				break;
+			}
 		}
 
-		if (!overlapsAnyPlatform && !overlapsAnyObstacle) {
+		if (!overlapsAnyPlatform && !overlapsAnyObstacle && !tooCloseToRecentlyCleared) {
 			obstacles.push_back(std::make_unique<Bird>(sf::Vector2f(x, y)));
 			birdsSpawnedThisBlock++;
 			obstacleSpawnTimer = 10.f + static_cast<float>(std::rand() % 8);
@@ -364,6 +381,7 @@ void PlayState::spawnBeeNest(float deltaTime) {
 
 	const int MAX_ATTEMPTS = 30;
 	const float MARGIN = 50.f;
+	const float CLEARED_SPOT_RADIUS = 220.f;
 	const float NEST_WIDTH = 45.f;
 	const float NEST_HEIGHT = 45.f;
 	
@@ -404,7 +422,15 @@ void PlayState::spawnBeeNest(float deltaTime) {
 			}
 		}
 	
-		if (!overlapsAnyPlatform && !overlapsAnyObstacle) {
+		bool tooCloseToRecentlyCleared = false;
+		for (const auto& spot : recentlyClearedSpots) {
+			if (std::abs(spot.first - y) < CLEARED_SPOT_RADIUS) {
+				tooCloseToRecentlyCleared = true;
+				break;
+			}
+		}
+
+		if (!overlapsAnyPlatform && !overlapsAnyObstacle && !tooCloseToRecentlyCleared) {
 			obstacles.push_back(std::make_unique<BeeNest>(sf::Vector2f(x,y)));
 			beeNestSpawnTimer = 15.f + static_cast<float>(std::rand() % 10);
 			return;
@@ -481,6 +507,8 @@ void PlayState::checkBulletHits() {
 			}
 			
 			if (bullet.getBounds().intersects((*it)->getBounds())) {
+				sf::FloatRect deadBounds = (*it)->getBounds();
+				recentlyClearedSpots.push_back({deadBounds.top + deadBounds.height / 2.f, 3.f});
 				bullet.deactivate();
 				obstacles.erase(it);
 				break;    // bullet is used up and move to next one
@@ -549,8 +577,20 @@ void PlayState::restartGame() {
 }
 
 void PlayState::handleEvent(const sf::Event& event) {
-	if (event.type == sf::Event::KeyPressed && event.key.code == sf::Keyboard::R) {
-		restartGame();
+	if (isGameOver) {
+		if (event.type == sf::Event::MouseMoved) {
+			sf::Vector2f mousePos(static_cast<float>(event.mouseMove.x), static_cast<float>(event.mouseMove.y));
+			for (auto& button : gameOverButtons) {
+				button.setHovered(button.contains(mousePos));
+			}
+		}
+		if (event.type == sf::Event::MouseButtonPressed && event.mouseButton.button == sf::Mouse::Left) {
+			sf::Vector2f mousePos(static_cast<float>(event.mouseButton.x), static_cast<float>
+				(event.mouseButton.y));
+			for (auto& button : gameOverButtons) {
+				button.handleClick(mousePos);
+			}
+		}
 	} 
 }
 
@@ -629,6 +669,19 @@ void PlayState::update(float deltaTime) {
 		}
 		nest->markSpawned();
 	}
+
+	for (auto& spot : recentlyClearedSpots) {
+		spot.second -= deltaTime;
+	}
+
+	recentlyClearedSpots.erase(
+		std::remove_if(recentlyClearedSpots.begin(), recentlyClearedSpots.end(), 
+			[](const auto & spot) {
+				return spot.second <= 0.f; 
+		}), 
+		recentlyClearedSpots.end()
+	);
+
 	checkObstacles(deltaTime);
 	spawnObstacles(deltaTime);
 	spawnBeeNest(deltaTime);
@@ -710,6 +763,8 @@ void PlayState::render(sf::RenderWindow& window) {
 	
 	if (isGameOver) {
 		window.draw(gameOverText);
-		window.draw(restartText);
+		for (const auto& button : gameOverButtons) {
+			button.draw(window);
+		}
 	}
 }

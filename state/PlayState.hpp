@@ -3,6 +3,7 @@
 
 
 #pragma once
+#include "../ui/Button.hpp"
 #include "GameState.hpp"
 #include "../platform/Platform.hpp"
 #include "../Player.hpp"
@@ -42,6 +43,7 @@ private:
 	bool isGameOver;
 	bool isFallingFromBirdHit;
 	int birdsSpawnedThisBlock;
+	std::vector<std::pair<float, float>> recentlyClearedSpots;  	
 
 	int currentScoreBlock;
 	int springUnlockScore;
@@ -59,7 +61,7 @@ private:
 	bool fontLoaded;
 	sf::Text scoreText;
 	sf::Text gameOverText;
-	sf::Text restartText;
+	std::vector<Button> gameOverButtons;
 
 	sf::Texture bananaIconTexture;
 	sf::Sprite bananaIconSprite;

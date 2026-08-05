@@ -7,7 +7,8 @@
 
 class Button {
 public: 
-	Button(const sf::Font& font, const std::string& label, sf::Vector2f position, sf::Vector2f size);
+	Button(const sf::Font& font, const std::string& label, sf::Vector2f position, sf::Vector2f size, 
+	const std::string& texturePath);
 	void setOnClick(std::function<void()>callback) {onClick = callback; }
 
 	bool contains(sf::Vector2f point) const;
@@ -20,7 +21,8 @@ private:
 	sf::Vector2f size;
 
 // rounded rectangle 
-	sf::RectangleShape body;
+	sf::Texture bodyTexture;
+	sf::Sprite body;
 	sf::Text text;
 
 	std::function<void()>onClick;
