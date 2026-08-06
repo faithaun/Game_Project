@@ -10,6 +10,7 @@
 #include "../platform/MovingBehavior.hpp"
 #include "../platform/BreakingBehavior.hpp"
 #include "../ResourceManager.hpp"
+#include "../obstacles/ObstacleFactory.hpp"
 #include <cstdlib>
 #include <cmath>
 #include <ctime>
@@ -349,7 +350,7 @@ void PlayState::spawnObstacles(float deltaTime) {
 		}
 
 		if (!overlapsAnyPlatform && !overlapsAnyObstacle && !tooCloseToRecentlyCleared) {
-			obstacles.push_back(std::make_unique<Bird>(sf::Vector2f(x, y)));
+			obstacles.push_back(ObstacleFactory::createBird(sf::Vector2f(x, y)));
 			birdsSpawnedThisBlock++;
 			obstacleSpawnTimer = 10.f + static_cast<float>(std::rand() % 8);
 			return;
@@ -426,7 +427,7 @@ void PlayState::spawnBeeNest(float deltaTime) {
 		}
 
 		if (!overlapsAnyPlatform && !overlapsAnyObstacle && !tooCloseToRecentlyCleared) {
-			obstacles.push_back(std::make_unique<BeeNest>(sf::Vector2f(x,y)));
+			obstacles.push_back(ObstacleFactory::createBeeNest(sf::Vector2f(x,y)));
 			beeNestSpawnTimer = 15.f + static_cast<float>(std::rand() % 10);
 			return;
 		}
@@ -443,7 +444,7 @@ void PlayState::spawnRockWave() {
 		float y = topOfView - 100.f - static_cast<float>(std::rand() % 500);
 		float speed = 115.f + static_cast<float>(std::rand() % 135);
 
-		obstacles.push_back(std::make_unique<FallingRock>(sf::Vector2f(x, y), speed));
+		obstacles.push_back(ObstacleFactory::createFallingRock(sf::Vector2f(x, y), speed));
 
 	}
 }
@@ -660,7 +661,7 @@ void PlayState::update(float deltaTime) {
 			float offsetY = static_cast<float>(std::rand() % 30) - 15.f;
 			sf::Vector2f beePos(nestPos.x + offsetX, nestPos.y + offsetY);
 
-			obstacles.push_back(std::make_unique<Bee>(nestPos, angle, speed));
+			obstacles.push_back(ObstacleFactory::createBee(nestPos, angle, speed));
 		}
 		nest->markSpawned();
 	}
