@@ -21,7 +21,6 @@ private:
 	sf::Vector2f size;
 
 // rounded rectangle 
-	sf::Texture bodyTexture;
 	sf::Sprite body;
 	sf::Text text;
 

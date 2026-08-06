@@ -7,8 +7,7 @@ Bird::Bird(sf::Vector2f position) : Obstacle(position, sf::Vector2f(130.f, 130.f
 }
 
 bool Bird::onHitFromBelow(Player& player) {
-	//dizzy - always fatar, no exception
-	return true;
+	return !player.isShieldActive();
 }
 
 

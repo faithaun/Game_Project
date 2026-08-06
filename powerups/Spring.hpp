@@ -16,7 +16,6 @@ public:
 	} // stays after use
 
 private:
-	static sf::Texture& getTexture();
 };
 
 #endif // SPRING_HPP

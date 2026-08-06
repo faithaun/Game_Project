@@ -1,5 +1,6 @@
 #include "Button.hpp"
 #include <iostream>
+#include "../ResourceManager.hpp"
 
 namespace {
 	const sf::Color kNormalTint(255, 255, 255);
@@ -10,9 +11,7 @@ namespace {
 Button::Button(const sf::Font& font, const std::string& label, sf::Vector2f position, sf::Vector2f size, const 
 	std::string& texturePath) : position(position), size(size) {	
 	
-	if (!bodyTexture.loadFromFile(texturePath)) {
-		std::cerr << "Failed to load " << texturePath << std::endl;
-	}
+	sf::Texture& bodyTexture = ResourceManager::getInstance().getTexture(texturePath);
 	body.setTexture(bodyTexture);
 	sf::Vector2u texSize = bodyTexture.getSize();
 	if (texSize.x > 0 && texSize.y > 0) {

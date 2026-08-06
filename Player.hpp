@@ -58,11 +58,8 @@ public:
 
 private:
 	sf::RectangleShape shape;  //represent the player
-	sf::Texture texture;
 	sf::Sprite sprite;
-	sf::Texture bubbleTexture; //shield indicator 
 	sf::Sprite bubbleSprite;
-	sf::Texture hurtTexture;  //show once the game end
 	sf::Vector2f velocity;        //current velocity
 	
 	bool facingRight = true;  //which way th monkey sprite is currently flipped

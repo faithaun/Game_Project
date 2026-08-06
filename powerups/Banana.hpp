@@ -11,9 +11,7 @@ public:
 	void draw(sf::RenderWindow& window) const override;
 //consumedOnUse() uses the default true and disappeard after pickup
 private:
-	sf::Texture texture;
 	sf::Sprite sprite;
-
 
 };
 

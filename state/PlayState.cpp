@@ -9,6 +9,7 @@
 #include "../obstacles/Bee.hpp"
 #include "../platform/MovingBehavior.hpp"
 #include "../platform/BreakingBehavior.hpp"
+#include "../ResourceManager.hpp"
 #include <cstdlib>
 #include <cmath>
 #include <ctime>
@@ -84,9 +85,7 @@ PlayState::PlayState(Game& game) : game(game),
 	}
 
 	//background
-	if (!backgroundTexture.loadFromFile("resources/playbackground.png")) {
-		std::cerr << "Warning: could not load resources/playbackground.png" << std::endl;
-	}
+	sf::Texture& backgroundTexture = ResourceManager::getInstance().getTexture("resources/playbackground.png");
 	backgroundSprite.setTexture(backgroundTexture);
 	sf::Vector2u texSize = backgroundTexture.getSize();
 	if (texSize.x > 0 && texSize.y > 0) {
@@ -94,9 +93,7 @@ PlayState::PlayState(Game& game) : game(game),
 	}
 
 		//ground floor: with the bottom 
-	if (!groundTexture.loadFromFile("resources/ground_background.png")) {
-		std::cerr << "Warning could not load ground background" << std::endl;
-	}
+	sf::Texture& groundTexture = ResourceManager::getInstance().getTexture("resources/ground_background.png");
 	groundSprite.setTexture(groundTexture);
 	sf::Vector2u groundSize = groundTexture.getSize();
 	if (groundSize.x > 0 && groundSize.y > 0) {
@@ -110,9 +107,7 @@ PlayState::PlayState(Game& game) : game(game),
 	scoreText.setPosition(10.f, 10.f);
 	
 	//banana icon + running total
-	if (!bananaIconTexture.loadFromFile("resources/banana.png")) {
-		std::cerr << "Warning: could not load resources/Banana.png" << std::endl;
-	}
+	sf::Texture& bananaIconTexture = ResourceManager::getInstance().getTexture("resources/banana.png");
 	bananaIconSprite.setTexture(bananaIconTexture);
 	bananaIconSprite.setScale(0.5f, 0.5f);
 	bananaIconSprite.setPosition(10.f, 40.f);

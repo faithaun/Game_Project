@@ -31,9 +31,7 @@ private:
 	std::vector<std::unique_ptr<Obstacle>>obstacles;	
 	BulletPool bulletPool;
 
-	sf::Texture backgroundTexture;
 	sf::Sprite backgroundSprite;
-	sf::Texture groundTexture;
 	sf::Sprite groundSprite;
 
 	sf::View gameView;  //scrolling camera
@@ -63,7 +61,6 @@ private:
 	sf::Text gameOverText;
 	std::vector<Button> gameOverButtons;
 
-	sf::Texture bananaIconTexture;
 	sf::Sprite bananaIconSprite;
 	sf::Text bananaCountText;
 	sf::Text ammoText;

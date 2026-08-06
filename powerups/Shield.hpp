@@ -13,7 +13,6 @@ public:
 	//consumedOnUse() use default - disappear after pickup
 
 private: 
-	sf::Texture texture;
 	sf::Sprite sprite;
 	
 	static constexpr float SHIELD_DURATION = 6.f;   //seconds of invincibility

@@ -1,5 +1,5 @@
 #include "Obstacle.hpp"
-#include <iostream>
+#include "../ResourceManager.hpp"
 
 Obstacle::Obstacle(sf::Vector2f position, sf::Vector2f size, sf::Color color, std::unique_ptr<MovementStrategy> strategy, const std::string& texturePath)
 	: movementStrategy(std::move(strategy)) {
@@ -8,14 +8,11 @@ Obstacle::Obstacle(sf::Vector2f position, sf::Vector2f size, sf::Color color, st
 	shape.setFillColor(color);
 
 	if (!texturePath.empty()) {
-		if (texture.loadFromFile(texturePath)) {
-			shape.setTexture(&texture);
-			shape.setFillColor(sf::Color::White);    //white so png real colors show through
-		} else { 
-			std::cerr << "Warning: could not load" << texturePath << std::endl;
-		}
+		sf::Texture& texture = ResourceManager::getInstance().getTexture(texturePath);
+		shape.setTexture(&texture);
+		shape.setFillColor(sf::Color::White);   //white so png real color
 	}
-} 
+}
 
 void Obstacle::update(float deltaTime) {
 	movementStrategy->move(shape, deltaTime);

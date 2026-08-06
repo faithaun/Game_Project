@@ -18,11 +18,9 @@ public:
 private:
 	Game& game;
 	sf::Font font;
-	sf::Texture backgroundTexture;
+
 	sf::Sprite backgroundSprite;
-	sf::Texture mascotTexture;
 	sf::Sprite mascotSprite;
-	sf::Texture titleTexture;
 	sf::Sprite titleSprite;
 	std::vector<Button> buttons;
 

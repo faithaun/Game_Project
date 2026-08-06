@@ -2,6 +2,7 @@
 #include "../Game.hpp"
 #include "PlayState.hpp"
 #include <iostream>
+#include "../ResourceManager.hpp"
 
 MainMenuState::MainMenuState(Game& game) : game(game) {
 	if (!font.loadFromFile("resources/LuckiestGuy.ttf"))  {
@@ -16,9 +17,7 @@ MainMenuState::MainMenuState(Game& game) : game(game) {
 }
 
 void MainMenuState::setupBackground() {
-	if (!backgroundTexture.loadFromFile("resources/ground_background.png")) {
-		std::cerr << "Failed to load resources/MainMenu.png" << std::endl;
-	}
+	sf::Texture& backgroundTexture = ResourceManager::getInstance().getTexture("resources/ground_background.png");
 	
 	backgroundSprite.setTexture(backgroundTexture);
 
@@ -30,9 +29,7 @@ void MainMenuState::setupBackground() {
 } 
   
 void MainMenuState::setupTitle() {
-	if (!titleTexture.loadFromFile("resources/title_logo.png")) {
-		std::cerr << "Failed to load title logo" << std::endl;
-	} 
+	sf::Texture& titleTexture = ResourceManager::getInstance().getTexture("resources/title_logo.png");
 	titleSprite.setTexture(titleTexture);
 
 	sf::Vector2u texSize = titleTexture.getSize();
@@ -74,9 +71,7 @@ void MainMenuState::setupButtons() {
 }
 
 void MainMenuState::setupMascot() {
-	if (!mascotTexture.loadFromFile("resources/monkey.png")) {
-		std::cerr << "Failed to load resources/monkey.png" << std::endl;
-	}
+	sf::Texture& mascotTexture = ResourceManager::getInstance().getTexture("resources/monkey.png");
 	mascotSprite.setTexture(mascotTexture);
 	
 	sf::Vector2u texSize = mascotTexture.getSize();

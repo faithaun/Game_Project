@@ -1,5 +1,5 @@
 #include "Player.hpp"
-#include <iostream>
+#include "ResourceManager.hpp"
 #include <algorithm>
 
 //definition of tunable constants
@@ -17,11 +17,11 @@ Player::Player(float startX, float startY) : velocity(0.f, 0.f) {
 	shape.setOrigin(WIDTH / 2.f, HEIGHT / 2.f);
 	shape.setPosition(startX, startY);
 	
-	if (!texture.loadFromFile("resources/monkey.png")) {
-		std::cerr << "Warning: could not load player.png" << std::endl;
-	}
+	sf::Texture& texture = ResourceManager::getInstance().getTexture("resources/monkey.png");
 	sprite.setTexture(texture);
 	sf::Vector2u texSize = texture.getSize();
+
+
 	if (texSize.x > 0 && texSize.y > 0) {
 		float visualScale = 1.5f; // 50% bigger
 		baseScaleX = visualScale * WIDTH / texSize.x;
@@ -32,11 +32,10 @@ Player::Player(float startX, float startY) : velocity(0.f, 0.f) {
 	sprite.setPosition(startX, startY);
 
 	//shield bubble
-	if (!bubbleTexture.loadFromFile("resources/bubble.png")) {
-		std::cerr << "Warning: could not load bubble" << std::endl;
-	}
+	sf::Texture& bubbleTexture = ResourceManager::getInstance().getTexture("resources/bubble.png");
 	bubbleSprite.setTexture(bubbleTexture);
 	sf::Vector2u bubbleTexSize = bubbleTexture.getSize();
+
 	if (bubbleTexSize.x > 0 && bubbleTexSize.y > 0) {
 		float monkeyRenderedWidth = std::abs(baseScaleX) * texSize.x;
 		float monkeyRenderedHeight  = baseScaleY * texSize.y;
@@ -49,9 +48,6 @@ Player::Player(float startX, float startY) : velocity(0.f, 0.f) {
 	bubbleSprite.setPosition(startX, startY);
 	bubbleSprite.setColor(sf::Color(255, 255, 255, 110));  //translucent
 
-	if (!hurtTexture.loadFromFile("resources/hurt_monkey.png")) {
-		std::cerr << "Warning cound not load hurt monkey" << std::endl;
-	}
 }
 
 //handle input: reads keuboard state, sets horizontal velocty
@@ -91,6 +87,7 @@ void Player::bigJump() {
 
 void Player::showHurt() {
 	velocity = sf::Vector2f(0.f, 0.f);
+	sf::Texture& hurtTexture = ResourceManager::getInstance().getTexture("resources/hurt_monkey.png");
 	sprite.setTexture(hurtTexture);
 	sf::Vector2u hurtSize = hurtTexture.getSize();
 	if (hurtSize.x > 0 && hurtSize.y > 0) {
@@ -171,6 +168,7 @@ void Player::reset(float x, float y) {
 }
 
 void Player::restoreIdleSprite() {
+	sf::Texture& texture = ResourceManager::getInstance().getTexture("resources/monkey.png");
 	sprite.setTexture(texture);
 	sf::Vector2u texSize = texture.getSize();
 	if (texSize.x > 0 && texSize.y > 0) {

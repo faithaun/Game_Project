@@ -1,15 +1,13 @@
 #include "Banana.hpp"
 #include "../Player.hpp"
-#include <iostream>
+#include "../ResourceManager.hpp"
 
 Banana::Banana(sf::Vector2f position) : PowerUp(position) {
 	//shape stays invisible- only used for collision detection (get(bounds())
 	shape.setSize({45.f, 45.f});
 	shape.setPosition(position);
-
-	if (!texture.loadFromFile("resources/banana.png")) {
-		std::cerr << "Warning: could not load resources/banana.png" << std::endl;
-	}
+	
+	sf::Texture& texture = ResourceManager::getInstance().getTexture("resources/banana.png");
 	sprite.setTexture(texture);
 	sf::Vector2u texSize = texture.getSize();
 	

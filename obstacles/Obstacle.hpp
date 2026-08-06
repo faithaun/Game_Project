@@ -39,7 +39,6 @@ public:
 
 protected:
 	sf::RectangleShape shape;
-	sf::Texture texture;
 
 private:
 	std::unique_ptr<MovementStrategy> movementStrategy;
