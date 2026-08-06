@@ -1,9 +1,29 @@
 #include "Game.hpp"
 #include "state/MainMenuState.hpp"
+#include <fstream>
 
-Game::Game() : window(sf::VideoMode(540, 700), "Jungle Jumper") {
+Game::Game() : window(sf::VideoMode(540, 700), "Jungle Jumper"), highScore(0) {
 	window.setFramerateLimit(60);
+	loadHighScore();
 	changeState(std::make_unique<MainMenuState>(*this));
+}
+
+void Game::loadHighScore() {
+	std::ifstream in("highscore.txt");
+	if (in) {
+		in >> highScore;
+	} 
+	//file doesnt exist yet
+}
+
+void Game::updateHighScore(int score) {
+	if (score > highScore) {
+		highScore = score;
+		std::ofstream out ("highscore.txt");
+		if (out) {
+			out << highScore;
+		}
+	}
 }
 
 void Game::changeState(std::unique_ptr<GameState> newState) {

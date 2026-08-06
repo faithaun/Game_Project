@@ -62,6 +62,10 @@ PlayState::PlayState(Game& game) : game(game),
 	cameraCenterY(WINDOW_HEIGHT / 2.f),
 	bestHeightY(WINDOW_HEIGHT - 100.f), 
 	score(0), 
+	
+	highScoreLineY(WINDOW_HEIGHT - 100.f - game.getHighScore() * 2.f),
+	highScoreSavedThisRun(false),
+
 	isGameOver(false), 
 	isFallingFromBirdHit(false),
 	birdsSpawnedThisBlock(0),
@@ -106,6 +110,9 @@ PlayState::PlayState(Game& game) : game(game),
 	scoreText.setCharacterSize(24);
 	scoreText.setFillColor(sf::Color::Black);
 	scoreText.setPosition(10.f, 10.f);
+
+	//world height matching players saved best
+	highScoreLineY = (WINDOW_HEIGHT - 100.f) - 2.f * static_cast<float>(game.getHighScore());
 	
 	//banana icon + running total
 	sf::Texture& bananaIconTexture = ResourceManager::getInstance().getTexture("resources/banana.png");
@@ -119,10 +126,20 @@ PlayState::PlayState(Game& game) : game(game),
 	bananaCountText.setPosition(45.f, 42.f);
 		
 	//live ammo count 
+	sf::Texture& ammoIconTexture = ResourceManager::getInstance().getTexture("resources/banana_coin.png");
+	ammoIconSprite.setTexture(ammoIconTexture);
+	sf::Vector2u ammoIconTexSize = ammoIconTexture.getSize();
+	if (ammoIconTexSize.x > 0 && ammoIconTexSize.y > 0) {
+		float targetWidth = 44.f;  //match banana icon
+		float scale = targetWidth / ammoIconTexSize.x;
+		ammoIconSprite.setScale(scale, scale);
+	}
+	ammoIconSprite.setPosition(10.f, 65.f);
+
 	ammoText.setFont(font);
-	ammoText.setCharacterSize(22);
+	ammoText.setCharacterSize(20);
 	ammoText.setFillColor(sf::Color::Black);
-	ammoText.setPosition(WINDOW_WIDTH - 110.f, 10.f);
+	ammoText.setPosition(45.f, 67.f);
 	
 	gameOverText.setFont(font);
 	gameOverText.setCharacterSize(48);
@@ -148,7 +165,50 @@ PlayState::PlayState(Game& game) : game(game),
 		this->game.requestQuit();
 	});
 	
+//pause icon 
+	pauseIconBounds = sf::FloatRect(WINDOW_WIDTH - 40.f, 10.f, 30.f, 28.f);
 	
+	pausedText.setFont(font);
+	pausedText.setCharacterSize(48);
+	pausedText.setFillColor(sf::Color(30, 30, 30));
+	pausedText.setString("PAUSED");
+	sf::FloatRect pausedBounds = pausedText.getLocalBounds();
+	pausedText.setOrigin(pausedBounds.left + pausedBounds.width / 2.f, pausedBounds.top + pausedBounds.height / 2.f);
+	pausedText.setPosition(WINDOW_WIDTH / 2.f, WINDOW_HEIGHT / 2.f - 80.f);
+
+	sf::Vector2f resumeButtonSize(220.f, 65.f);
+	
+	sf::Texture& resumeTexture = ResourceManager::getInstance().getTexture("resources/banana_bread.png");
+	resumeSprite.setTexture(resumeTexture);
+	sf::Vector2u resumeTexSize = resumeTexture.getSize();
+	if (resumeTexSize.x > 0 && resumeTexSize.y > 0) {
+		float resumeWidth = 220.f;
+		float resumeScale = resumeWidth / resumeTexSize.x;
+		resumeSprite.setScale(resumeScale, resumeScale);
+		resumeSprite.setOrigin(resumeTexSize.x / 2.f, resumeTexSize.y / 2.f);
+	}
+	resumeSprite.setPosition(WINDOW_WIDTH / 2.f, WINDOW_HEIGHT / 2.f + 35.f);
+
+	resumeText.setFont(font);
+	resumeText.setCharacterSize(22);
+	resumeText.setFillColor(sf::Color(60, 45, 25));
+	resumeText.setString("Resume");
+	sf::FloatRect resumeBounds = resumeText.getLocalBounds();
+	resumeText.setOrigin(resumeBounds.left + resumeBounds.width / 2.f, resumeBounds.top + resumeBounds.height / 2.f);
+	resumeText.setPosition(resumeSprite.getPosition());
+	
+	// best score shown
+	finalScoreText.setFont(font);
+	finalScoreText.setCharacterSize(18);
+	finalScoreText.setFillColor(sf::Color::Black);
+	finalScoreText.setPosition(WINDOW_WIDTH / 2.f, WINDOW_HEIGHT / 2.f - 75.f);
+
+	finalHighScoreText.setFont(font);
+	finalHighScoreText.setCharacterSize(18);
+	finalHighScoreText.setFillColor(sf::Color(80, 60, 20));
+	finalHighScoreText.setPosition(WINDOW_WIDTH / 2.f, WINDOW_HEIGHT / 2.f - 50.f);
+
+
 	gameView.setSize(WINDOW_WIDTH, WINDOW_HEIGHT);	
 	gameView.setCenter(WINDOW_WIDTH / 2.f, cameraCenterY);
 	
@@ -545,7 +605,7 @@ void PlayState::updateScore() {
 
 	scoreText.setString("Score: " + std::to_string(score));
 	bananaCountText.setString(std::to_string(player.getBananaCollected()));
-	ammoText.setString("Ammo: " + std::to_string(player.getAmmo()));
+	ammoText.setString(std::to_string(player.getAmmo()));
 }
 
 void PlayState::restartGame() {
@@ -567,12 +627,40 @@ void PlayState::restartGame() {
 
 	bestHeightY = WINDOW_HEIGHT - 100.f;
 	score = 0;
+	
+	highScoreLineY = WINDOW_HEIGHT - 100.f - game.getHighScore() * 2.f;
+	highScoreSavedThisRun = false;
+
 	isGameOver = false;
 	cameraFollowingDown = false;
 	fallStartBottomY = 0.f;
 }
 
 void PlayState::handleEvent(const sf::Event& event) {
+	if (isPaused) {
+		if (event.type == sf::Event::MouseMoved) {
+			sf::Vector2f mousePos(static_cast<float>(event.mouseMove.x), static_cast<float>(event.mouseMove.y));
+			bool hovered = resumeSprite.getGlobalBounds().contains(mousePos);
+			resumeSprite.setColor(hovered ? sf::Color(230, 230, 230) : sf::Color::White);
+		}
+		if (event.type == sf::Event::MouseButtonPressed && event.mouseButton.button == sf::Mouse::Left) {
+			sf::Vector2f mousePos(static_cast<float>(event.mouseButton.x), static_cast<float>
+				(event.mouseButton.y));
+			if (resumeSprite.getGlobalBounds().contains(mousePos)) {
+				isPaused = false;
+			}
+		}
+		return;
+
+	}
+	if (!isGameOver && event.type == sf::Event::MouseButtonPressed && event.mouseButton.button == sf::Mouse::Left) {
+		sf::Vector2f mousePos(static_cast<float>(event.mouseButton.x), static_cast<float>
+			(event.mouseButton.y));
+		if (pauseIconBounds.contains(mousePos))	{
+			isPaused = true;
+			return;
+		}
+	}
 	if (isGameOver) {
 		if (event.type == sf::Event::MouseMoved) {
 			sf::Vector2f mousePos(static_cast<float>(event.mouseMove.x), static_cast<float>(event.mouseMove.y));
@@ -587,10 +675,14 @@ void PlayState::handleEvent(const sf::Event& event) {
 				button.handleClick(mousePos);
 			}
 		}
-	} 
+	}
 }
 
 void PlayState::update(float deltaTime) {
+	if (isPaused) {
+		return;
+	}
+
 	if (isGameOver) {        //game over show -- freeze camera, let plater fall under gavity
 		return;      // freeze gameplay until player restarts
 	}
@@ -707,6 +799,11 @@ void PlayState::update(float deltaTime) {
 		player.showHurt();
 		float bottomOfScreenY = cameraCenterY + WINDOW_HEIGHT / 2.f - 30.f;
 		player.setPosition(player.getPosition().x, bottomOfScreenY);
+
+		if (!highScoreSavedThisRun) {
+			game.updateHighScore(score);
+			highScoreSavedThisRun = true;
+		}
 	}
 }
 
@@ -739,6 +836,18 @@ void PlayState::render(sf::RenderWindow& window) {
 	bulletPool.draw(window);
 	player.draw(window);
 	
+	if (game.getHighScore() > 0) {	
+		sf::VertexArray dashedLine(sf::Lines);
+		float dashLength = 12.f;
+		float gapLength = 8.f;
+		for (float x = 0.f; x < WINDOW_WIDTH; x += dashLength + gapLength) {
+			dashedLine.append(sf::Vertex(sf::Vector2f(x, highScoreLineY), sf::Color(200, 60, 60, 180)));
+			dashedLine.append(sf::Vertex(sf::Vector2f(std::min(x +  dashLength, WINDOW_WIDTH), 
+				highScoreLineY), sf::Color(200, 60, 60, 180)));
+		}
+		window.draw(dashedLine);
+	}
+
 	window.setView(window.getDefaultView());
 	
 	if (rockWarningActive) {
@@ -751,14 +860,45 @@ void PlayState::render(sf::RenderWindow& window) {
 		dimOverlay.setFillColor(sf::Color(150, 0, 0, alpha));
 		window.draw(dimOverlay); 
  	}
-	window.draw(scoreText);
-	window.draw(bananaIconSprite);
-	window.draw(bananaCountText);
-	window.draw(ammoText);
 
+	if (!isGameOver) {
+		window.draw(scoreText);
+	// pause icon
+		sf::RectangleShape pauseBar(sf::Vector2f(6.f, 22.f));
+		pauseBar.setPosition(pauseIconBounds.left + 4.f, pauseIconBounds.top + 3.f);
+		window.draw(pauseBar);
+		pauseBar.setPosition(pauseIconBounds.left + 16.f, pauseIconBounds.top + 3.f);
+		window.draw(pauseBar);
+
+		if (isPaused) {
+			sf::RectangleShape dim(sf::Vector2f(WINDOW_WIDTH, WINDOW_HEIGHT));
+			dim.setFillColor(sf::Color(0, 0, 0, 120));
+			window.draw(dim);
+			window.draw(pausedText);
+			window.draw(resumeSprite);
+			window.draw(resumeText);
+		}
+
+		window.draw(bananaIconSprite);
+		window.draw(bananaCountText);
+		window.draw(ammoIconSprite);
+		window.draw(ammoText);
+	}	
 	
 	if (isGameOver) {
 		window.draw(gameOverText);
+
+		finalScoreText.setString("Score: " + std::to_string(score));
+		sf::FloatRect fsBounds = finalScoreText.getLocalBounds();
+		finalScoreText.setOrigin(fsBounds.left + fsBounds.width / 2.f, fsBounds.top + fsBounds.height / 2.f);
+		window.draw(finalScoreText);
+
+		finalHighScoreText.setString("Best: " + std::to_string(game.getHighScore()));
+		sf::FloatRect fhBounds = finalHighScoreText.getLocalBounds();
+		finalHighScoreText.setOrigin(fhBounds.left + fhBounds.width / 2.f, fhBounds.top + fhBounds.height / 2.f);
+		window.draw(finalHighScoreText);
+
+	
 		for (const auto& button : gameOverButtons) {
 			button.draw(window);
 		}

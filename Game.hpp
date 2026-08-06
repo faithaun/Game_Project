@@ -13,7 +13,16 @@ public:
 	void changeState(std::unique_ptr<GameState> newState);
 	void requestQuit() {window.close(); }
 
+	int getHighScore() const {
+		return highScore;
+	}
+	void updateHighScore(int score);
+
 private: 
 	sf::RenderWindow window;
 	std::unique_ptr<GameState> currentState;
+
+	int highScore = 0;
+	void loadHighScore();
+	void saveHighScore();
 };

@@ -38,6 +38,10 @@ private:
 	float cameraCenterY;  // current vertical center of camera
 	float bestHeightY;    //highest Y the player has ever reach for score
 	int score;
+
+	float highScoreLineY;
+	bool highScoreSavedThisRun;
+
 	bool isGameOver;
 	bool isFallingFromBirdHit;
 	int birdsSpawnedThisBlock;
@@ -61,8 +65,17 @@ private:
 	sf::Text gameOverText;
 	std::vector<Button> gameOverButtons;
 
+	bool isPaused = false;
+	sf::FloatRect pauseIconBounds;
+	sf::Text pausedText;
+	sf::Sprite resumeSprite;
+	sf::Text resumeText;
+	sf::Text finalHighScoreText;
+	sf::Text finalScoreText;
+
 	sf::Sprite bananaIconSprite;
 	sf::Text bananaCountText;
+	sf::Sprite ammoIconSprite;
 	sf::Text ammoText;
 
 	void spawnPlatforms();
