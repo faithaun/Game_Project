@@ -6,14 +6,16 @@ bouncing upward across jungle platforms, dodging obstacles, collecting power-ups
 you can reach before you fall. 
 
 ## Features
-- **
+- **Infinite Procedural Climbing** - Platfroms are generated and recycled as player climb, and it never visibly repeats.
 - **Three Platform Behaviors** - Normal, Moving and Broken platfroms, unclock score increases.
 - **Power-Up System** - collect and use certain item for temporary abilities:
-	- Banana:
-	- Shield:
-	- Spring: 
-- **Obstacle Variety** - avoid and face off against different obstacles including birds, bees, and falling rocks.
-- 
+	- Banana: grants ammo for player's projectile attack
+	- Shield: protects against one hit, shown as a translucent bubble around the monkey
+	- Spring: Launches the player higher than a normal jump
+- **Obstacle Variety** - Avoid and face against different obstacles including birds, bees, and falling rocks.
+- **Persistent High Score** - Best Score is save and a dashed line marks the height of the previous best. 
+- **Directional Sprite** - Monkey flips to face whichever diections its currently moving. 
+- **Ammo** - For every banana collected, five ammo are given and can shoot birds and bees. 
 
 
 ## Controls
@@ -66,13 +68,15 @@ JungleJumper/
 ## How to run: 
 ### Using Makefile
 ```text
-
+make
+./main
+```
 ### Gameplay 
 1. Climb high by bouncing across platforms --normal, moving, and broken.
 2. Falling off the screen ends the run.
 3. Watch out for birds, falling rocks, and bee swarms as your score gets higher.
 4. Collect bananas for ammo, springs for a boost, and shield for protection. 
-5. Try to climb higher than 
+5. Try to climb higher than the dashed line marking your saved high score from previous run. 
 
 
 
