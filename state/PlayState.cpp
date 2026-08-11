@@ -429,6 +429,7 @@ void PlayState::spawnObstacles(float deltaTime) {
 		if (!overlapsAnyPlatform && !overlapsAnyObstacle && !tooCloseToRecentlyCleared && 
 			!tooCloseToLastObstacle) {
 			obstacles.push_back(ObstacleFactory::createBird(sf::Vector2f(x, y)));
+			lastObstacleSpawnY = y;
 			birdsSpawnedThisBlock++;
 			obstacleSpawnTimer = 10.f + static_cast<float>(std::rand() % 8);
 			return;
@@ -509,6 +510,7 @@ void PlayState::spawnBeeNest(float deltaTime) {
 		if (!overlapsAnyPlatform && !overlapsAnyObstacle && !tooCloseToRecentlyCleared
 			&& !tooCloseToLastObstacle) {
 			obstacles.push_back(ObstacleFactory::createBeeNest(sf::Vector2f(x,y)));
+			lastObstacleSpawnY = y;
 			beeNestSpawnTimer = 15.f + static_cast<float>(std::rand() % 10);
 			return;
 		}
