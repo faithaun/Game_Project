@@ -535,7 +535,7 @@ void PlayState::spawnRockWave() {
 				sf::FloatRect existingBounds = existingObstacle->getBounds();
 				float dx = (existingBounds.left + existingBounds.width / 2.f) - x;
 				float dy = (existingBounds.top + existingBounds.height / 2.f) - y;
-				if (std::sqrt(dx * dx +  dy * dy) < ROCK_CLEARANCE) {
+				if (std::sqrt(dx * dx * dy * dy) < ROCK_CLEARANCE) {
 					tooClose = true;
 					break; 
 				}
