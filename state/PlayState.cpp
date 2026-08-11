@@ -36,6 +36,7 @@ namespace {
 	constexpr int SHIELD_UNLOCK_SCORE = 400;
 	constexpr int MOVING_PLATFORM_UNLOCK_SCORE = 400;
 	constexpr int BREAKING_PLATFORM_UNLOCK_SCORE = 600;
+	constexpr int HIGH_VARIETY_SCORE = 10000; //past this score, platform lean more on broken and moving
 	constexpr float GAME_OVER_MARGIN = 700.f;   //how far the camera follows the fall before freezin
 
 	//obstacles: 
@@ -48,6 +49,8 @@ namespace {
 	constexpr int BEE_NEST_UNLOCK_SCORE = 2000; 
 	constexpr float BEE_NEST_TRIGGER_DISTANCE = 400.f; //nest countdown
 
+	constexpr float MIN_OBSTACLE_PAGE_GAP = 3.5f;   //minimum page of vertical climb required between obstacle
+	
 	float randomSpacing(int currentScore) {
 		float minSpacing = (currentScore >= DIFFICULTY_SCORE) ? HARD_MIN_SPACING : EASY_MIN_SPACING;
 		float maxSpacing = (currentScore >= DIFFICULTY_SCORE) ? HARD_MAX_SPACING : EASY_MAX_SPACING;
@@ -267,7 +270,19 @@ void PlayState::recyclePlatforms() {
 			platform.shape.setPosition(x, highestPlatformY);
 
 			//decide behavior first
-			if (score >= BREAKING_PLATFORM_UNLOCK_SCORE && std::rand() % 10 == 0) {
+			if (score >= HIGH_VARIETY_SCORE) {
+				int roll = std::rand() % 10;
+				if (score >= BREAKING_PLATFORM_UNLOCK_SCORE && roll < 4) {
+					platform.behavior = std::make_unique<BreakingBehavior>();
+				} else if (score >= MOVING_PLATFORM_UNLOCK_SCORE && roll < 8) {
+					float speed = 80.f + static_cast<float>(std::rand() % 60);
+					float minX = 0.f;
+					float maxX = static_cast<float>(WINDOW_WIDTH);
+					platform.behavior  = std::make_unique<MovingBehavior>(minX, maxX, speed);
+				} else {
+					platform.behavior = std::make_unique<NormalBehavior>();
+				}
+			} else if (score >= BREAKING_PLATFORM_UNLOCK_SCORE && std::rand() % 10 == 0) {
 				platform.behavior = std::make_unique<BreakingBehavior>();
 			} else if (score >= MOVING_PLATFORM_UNLOCK_SCORE && std::rand() % 8 == 0) {
 				float speed = 80.f + static_cast<float>(std::rand() % 60);
@@ -408,8 +423,11 @@ void PlayState::spawnObstacles(float deltaTime) {
 				break;
 			}
 		}
+		
+		bool tooCloseToLastObstacle = std::abs(lastObstacleSpawnY - y) < MIN_OBSTACLE_PAGE_GAP * WINDOW_HEIGHT;
 
-		if (!overlapsAnyPlatform && !overlapsAnyObstacle && !tooCloseToRecentlyCleared) {
+		if (!overlapsAnyPlatform && !overlapsAnyObstacle && !tooCloseToRecentlyCleared && 
+			!tooCloseToLastObstacle) {
 			obstacles.push_back(ObstacleFactory::createBird(sf::Vector2f(x, y)));
 			birdsSpawnedThisBlock++;
 			obstacleSpawnTimer = 10.f + static_cast<float>(std::rand() % 8);
@@ -486,7 +504,10 @@ void PlayState::spawnBeeNest(float deltaTime) {
 			}
 		}
 
-		if (!overlapsAnyPlatform && !overlapsAnyObstacle && !tooCloseToRecentlyCleared) {
+		bool tooCloseToLastObstacle = std::abs(lastObstacleSpawnY - y) < MIN_OBSTACLE_PAGE_GAP * WINDOW_HEIGHT;
+
+		if (!overlapsAnyPlatform && !overlapsAnyObstacle && !tooCloseToRecentlyCleared
+			&& !tooCloseToLastObstacle) {
 			obstacles.push_back(ObstacleFactory::createBeeNest(sf::Vector2f(x,y)));
 			beeNestSpawnTimer = 15.f + static_cast<float>(std::rand() % 10);
 			return;
@@ -497,17 +518,37 @@ void PlayState::spawnBeeNest(float deltaTime) {
 
 void PlayState::spawnRockWave() {
 	float topOfView = cameraCenterY - WINDOW_HEIGHT / 2.f;
+	lastObstacleSpawnY = topOfView; //treat whole wave as one spawn event for spacing purpose
 	int rockCount = 3 + (std::rand() % 2); //randomly 3 of 4 
+	const int MAX_ATTEMPTS = 15;
+	const float ROCK_CLEARANCE = 90.f;   //minimum distance from existing obstacle
 
 	for (int i = 0; i < rockCount; ++i) {
-		float x = static_cast<float>(std::rand() % static_cast<int>(WINDOW_WIDTH - 40.f));
-		float y = topOfView - 100.f - static_cast<float>(std::rand() % 500);
-		float speed = 115.f + static_cast<float>(std::rand() % 135);
+		for (int attempt = 0; attempt < MAX_ATTEMPTS; ++attempt) {
+			float x = static_cast<float>(std::rand() % static_cast<int>(WINDOW_WIDTH - 40.f));
+			float y = topOfView - 100.f - static_cast<float>(std::rand() % 500);
+		
+			bool tooClose = false;
+			for (const auto& existingObstacle : obstacles) {
+				sf::FloatRect existingBounds = existingObstacle->getBounds();
+				float dx = (existingBounds.left + existingBounds.width / 2.f) - x;
+				float dy = (existingBounds.top + existingBounds.height / 2.f) - y;
+				if (std::sqrt(dx * dx * dy * dy) < ROCK_CLEARANCE) {
+					tooClose = true;
+					break; 
+				}
+			}
 
-		obstacles.push_back(ObstacleFactory::createFallingRock(sf::Vector2f(x, y), speed));
-
+			if (!tooClose) {
+				float speed = 115.f + static_cast<float>(std::rand() % 135);
+				obstacles.push_back(ObstacleFactory::createFallingRock(sf::Vector2f(x, y), speed));
+				break;
+			}
+			// if every attempt failed, this rock is simply skipped rather than forced in bad spot
+		}
 	}
 }
+
 void PlayState::recycleObstacles() {
 	float visibleBottom = cameraCenterY + WINDOW_HEIGHT / 2.f;
 	// remove obstacles that have scorred below visible area
@@ -774,7 +815,10 @@ void PlayState::update(float deltaTime) {
 	spawnObstacles(deltaTime);
 	spawnBeeNest(deltaTime);
 	
-	if (score >= nextRockWaveScore && !rockWarningActive) {
+	bool rockTooCloseToLastObstacle = std::abs(lastObstacleSpawnY - cameraCenterY) < MIN_OBSTACLE_PAGE_GAP 
+		* WINDOW_HEIGHT;
+
+	if (score >= nextRockWaveScore && !rockWarningActive && !rockTooCloseToLastObstacle) {
 		rockWarningActive = true;
 		rockWarningTimer = ROCK_WARNING_DURATION;
 		nextRockWaveScore += ROCK_WAVE_INTERVAL;

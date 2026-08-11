@@ -46,7 +46,8 @@ private:
 	bool isFallingFromBirdHit;
 	int birdsSpawnedThisBlock;
 	std::vector<std::pair<float, float>> recentlyClearedSpots;  	
-
+	float lastObstacleSpawnY = -100000.f; //most recent obstacle spawn event; start far away so first spawn is allowed
+	
 	int currentScoreBlock;
 	int springUnlockScore;
 	int maxSpringThisGame;

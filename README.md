@@ -62,6 +62,7 @@ JungleJumper/
 |---resource/      #fonts, graphics(png) 
 |---ui/
 |    |---Button.hpp/.cpp
+|---ResourceManager.hpp
 ```
 
 
