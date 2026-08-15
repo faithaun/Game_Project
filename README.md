@@ -1,4 +1,4 @@
-# Jungle Jumper  
+# Jungle Jumper 🙈
 
 ## About
 Jungle Jumper is a 2D infinite vertical climbing platformer built in C++ with SFML graphics Library. Play as a monkey 
