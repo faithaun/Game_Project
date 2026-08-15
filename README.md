@@ -69,6 +69,7 @@ JungleJumper/
 ## How to run: 
 ### Using Makefile
 ```text
+cd ECE205SUM26FP-main
 make
 ./main
 ```
